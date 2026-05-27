@@ -3,15 +3,15 @@ import Topbar from "./Topbar.jsx";
 
 export default function AppLayout({ title, children }) {
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex overflow-hidden">
+    <div className="flex h-screen min-h-screen overflow-hidden bg-slate-50 text-slate-900">
       <Sidebar />
 
-      <main className="flex-1 h-screen overflow-y-auto flex flex-col">
+      <main className="flex h-screen min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden">
         <Topbar title={title} />
 
-        <section className="w-full max-w-[1240px] mx-auto px-10 pt-[34px] pb-[70px]">
+        <div className="w-full max-w-[1240px] mx-auto px-10 py-[34px] pb-[70px]">
           {children}
-        </section>
+        </div>
       </main>
     </div>
   );

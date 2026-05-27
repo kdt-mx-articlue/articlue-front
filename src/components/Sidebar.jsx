@@ -1,7 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 
 const navItems = [
-  { label: "AI 커리어 홈", path: "/" },
+  { label: "AI 커리어 홈", path: "/home" },
   { label: "커리어 프로필 작성", path: "/resume" },
   { label: "커리어 피팅 & 맞춤 자소서", path: "/fitting" },
   { label: "AI 면접 시뮬레이션", path: "/interview" },
@@ -15,7 +15,7 @@ export default function Sidebar() {
   return (
     <aside className="w-[260px] h-screen bg-white border-r border-slate-200 flex flex-col shrink-0">
       <Link
-        to="/"
+        to="/home"
         className="px-[25px] py-[30px] text-[26px] font-black text-blue-600 tracking-[-0.8px] no-underline"
       >
         Articlue.
