@@ -1,27 +1,22 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { createBrowserRouter } from "react-router-dom";
 
-import Home from "../pages/Home";
-import Resume from "../pages/Resume";
-import Fitting from "../pages/Fitting";
-import Growth from "../pages/Growth";
-import Interview from "../pages/Interview";
-import MyPage from "../pages/MyPage";
-import Login from "../pages/Login";
-import Signup from "../pages/Signup";
+import Home from "../pages/Home.jsx";
+import Login from "../pages/Login.jsx";
+import Signup from "../pages/Signup.jsx";
 
-export default function Router() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/resume" element={<Resume />} />
-        <Route path="/fitting" element={<Fitting />} />
-        <Route path="/growth" element={<Growth />} />
-        <Route path="/interview" element={<Interview />} />
-        <Route path="/mypage" element={<MyPage />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
-      </Routes>
-    </BrowserRouter>
-  );
-}
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <Home />,
+  },
+  {
+    path: "/login",
+    element: <Login />,
+  },
+  {
+    path: "/signup",
+    element: <Signup />,
+  },
+]);
+
+export default router;

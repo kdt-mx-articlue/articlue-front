@@ -1,0 +1,31 @@
+import { useEffect, useState } from "react";
+
+export default function Topbar({ title }) {
+  const [greeting, setGreeting] = useState(
+    "오늘의 커리어 액션을 확인하세요"
+  );
+
+  useEffect(() => {
+    const currentUser = JSON.parse(
+      localStorage.getItem("articlue_current_user") || "null"
+    );
+
+    if (currentUser?.name) {
+      setGreeting(
+        `${currentUser.name} 님, 오늘의 커리어 액션을 확인하세요`
+      );
+    }
+  }, []);
+
+  return (
+    <header className="h-[68px] bg-white border-b border-slate-200 px-10 flex items-center justify-between shrink-0">
+      <h1 className="text-[22px] font-black tracking-[-0.4px] text-slate-900">
+        {title}
+      </h1>
+
+      <div className="flex items-center gap-3 text-[14px] font-extrabold text-slate-600">
+        <span>{greeting}</span>
+      </div>
+    </header>
+  );
+}
