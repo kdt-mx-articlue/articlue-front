@@ -98,7 +98,7 @@ function readJson(key, fallback) {
 function Field({ label, children }) {
   return (
     <div className="mb-4">
-      <label className="mb-2 block text-[13px] font-black text-slate-600">
+      <label className="mb-2 block text-[13px] font-black text-slate-600 dark:text-slate-300">
         {label}
       </label>
       {children}
@@ -110,14 +110,14 @@ function Section({ id, title, description, action, children }) {
   return (
     <section
       id={id}
-      className="mb-6 rounded-[24px] border border-slate-200 bg-white p-7 shadow-[0_8px_24px_rgba(15,23,42,0.06)]"
+      className="mb-6 rounded-[24px] border border-slate-200 bg-white p-7 shadow-[0_8px_24px_rgba(15,23,42,0.06)] transition-colors dark:border-slate-700 dark:bg-slate-900"
     >
       <div className="mb-[22px] flex items-start justify-between gap-4">
         <div>
-          <h2 className="mb-[7px] text-[20px] font-black tracking-[-0.4px] text-slate-900">
+          <h2 className="mb-[7px] text-[20px] font-black tracking-[-0.4px] text-slate-900 dark:text-white">
             {title}
           </h2>
-          <p className="text-[14px] leading-[1.6] text-slate-600">
+          <p className="text-[14px] leading-[1.6] text-slate-600 dark:text-slate-300">
             {description}
           </p>
         </div>
@@ -139,7 +139,7 @@ function ChoiceGroup({ value, options, onChange }) {
           className={`rounded-full border px-[14px] py-[10px] text-[13px] font-black transition ${
             value === option
               ? "border-blue-600 bg-blue-600 text-white"
-              : "border-slate-200 bg-white text-slate-600 hover:bg-slate-100"
+              : "border-slate-200 bg-white text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
           }`}
         >
           {option}
@@ -160,19 +160,19 @@ function Modal({ open, children }) {
 }
 
 const inputClass =
-  "w-full rounded-2xl border border-slate-200 bg-white px-[14px] py-[13px] text-[14px] font-bold text-slate-900 outline-none transition focus:border-blue-600 focus:ring-4 focus:ring-blue-100 disabled:bg-slate-100 disabled:text-slate-400";
+  "w-full rounded-2xl border border-slate-200 bg-white px-[14px] py-[13px] text-[14px] font-bold text-slate-900 outline-none transition focus:border-blue-600 focus:ring-4 focus:ring-blue-100 disabled:bg-slate-100 disabled:text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:ring-blue-950 dark:disabled:bg-slate-900 dark:disabled:text-slate-500";
 
 const textareaClass =
-  "min-h-[130px] w-full resize-y rounded-2xl border border-slate-200 bg-white px-[14px] py-[13px] text-[14px] font-bold leading-7 text-slate-900 outline-none transition focus:border-blue-600 focus:ring-4 focus:ring-blue-100";
+  "min-h-[130px] w-full resize-y rounded-2xl border border-slate-200 bg-white px-[14px] py-[13px] text-[14px] font-bold leading-7 text-slate-900 outline-none transition focus:border-blue-600 focus:ring-4 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:ring-blue-950";
 
 const secondaryButtonClass =
-  "inline-flex items-center justify-center rounded-full border border-slate-200 bg-slate-100 px-[18px] py-[11px] text-[14px] font-black text-slate-600 transition hover:-translate-y-0.5";
+  "inline-flex items-center justify-center rounded-full border border-slate-200 bg-slate-100 px-[18px] py-[11px] text-[14px] font-black text-slate-600 transition hover:-translate-y-0.5 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300";
 
 const primaryButtonClass =
   "inline-flex items-center justify-center rounded-full bg-blue-600 px-[18px] py-[11px] text-[14px] font-black text-white transition hover:-translate-y-0.5 hover:bg-blue-700";
 
 const outlineButtonClass =
-  "inline-flex items-center justify-center rounded-full border border-blue-600 bg-transparent px-[18px] py-[11px] text-[14px] font-black text-blue-700 transition hover:-translate-y-0.5";
+  "inline-flex items-center justify-center rounded-full border border-blue-600 bg-transparent px-[18px] py-[11px] text-[14px] font-black text-blue-700 transition hover:-translate-y-0.5 dark:text-blue-300";
 
 export default function Resume() {
   const navigate = useNavigate();
@@ -487,18 +487,18 @@ export default function Resume() {
     localStorage.setItem(RESUME_PROGRESS_KEY, String(progress));
     localStorage.setItem("articlue_resume_continue", "true");
     showToast("임시 저장되었습니다.");
-    navigate("/");
+    navigate("/home");
   };
 
   return (
     <AppLayout title="커리어 프로필 작성">
-      <div className="mb-6 rounded-[24px] border border-slate-200 bg-white p-6 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+      <div className="mb-6 rounded-[24px] border border-slate-200 bg-white p-6 shadow-[0_8px_24px_rgba(15,23,42,0.06)] transition-colors dark:border-slate-700 dark:bg-slate-900">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="min-w-[320px] flex-1">
             <div className="mb-[7px] text-[13px] font-black text-emerald-600">
               방금 전 저장됨 · <strong>{progress}% 완료</strong>
             </div>
-            <div className="h-[9px] overflow-hidden rounded-full bg-slate-100">
+            <div className="h-[9px] overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
               <div
                 className="h-full rounded-full bg-gradient-to-r from-blue-600 to-emerald-500 transition-all duration-300"
                 style={{ width: `${progress}%` }}
@@ -517,10 +517,10 @@ export default function Resume() {
       </div>
 
       <div className="mb-[26px]">
-        <h1 className="mb-[10px] text-[30px] font-black tracking-[-0.7px] text-slate-900">
+        <h1 className="mb-[10px] text-[30px] font-black tracking-[-0.7px] text-slate-900 dark:text-white">
           커리어 프로필 작성
         </h1>
-        <p className="text-[15px] leading-[1.7] text-slate-600">
+        <p className="text-[15px] leading-[1.7] text-slate-600 dark:text-slate-300">
           한 번만 입력하면 기업 매칭, 맞춤 자소서 생성, RAG 면접 시뮬레이션에
           활용되는 통합 프로필이 만들어집니다.
         </p>
@@ -531,12 +531,12 @@ export default function Resume() {
         title="1. 기본 정보 및 프로필 연동"
         description="GitHub를 연동하면 주요 기술 스택을 자동 파싱할 수 있습니다."
       >
-        <div className="mb-5 flex items-center justify-between gap-4 rounded-[22px] bg-slate-100 p-[18px]">
+        <div className="mb-5 flex items-center justify-between gap-4 rounded-[22px] bg-slate-100 p-[18px] dark:bg-slate-800">
           <div>
-            <strong className="mb-[5px] block font-black text-slate-900">
+            <strong className="mb-[5px] block font-black text-slate-900 dark:text-white">
               GitHub 계정 연동
             </strong>
-            <p className="text-[13px] leading-[1.5] text-slate-600">
+            <p className="text-[13px] leading-[1.5] text-slate-600 dark:text-slate-300">
               Repository, README, 사용 언어를 기반으로 기술 스택을 분석합니다.
             </p>
             <div
@@ -728,7 +728,7 @@ export default function Resume() {
           </Field>
         </div>
 
-        <label className="mt-1 flex items-center gap-2 text-[14px] font-extrabold text-slate-600">
+        <label className="mt-1 flex items-center gap-2 text-[14px] font-extrabold text-slate-600 dark:text-slate-300">
           <input
             type="checkbox"
             checked={form.hasGraduate}
@@ -774,10 +774,10 @@ export default function Resume() {
         {experiences.map((experience, index) => (
           <div
             key={index}
-            className="mb-4 rounded-[22px] border border-slate-200 bg-slate-100 p-5 last:mb-0"
+            className="mb-4 rounded-[22px] border border-slate-200 bg-slate-100 p-5 last:mb-0 dark:border-slate-700 dark:bg-slate-800"
           >
             <div className="mb-4 flex items-center justify-between gap-3">
-              <strong className="text-[16px] font-black">경험 {index + 1}</strong>
+              <strong className="text-[16px] font-black text-slate-900 dark:text-white">경험 {index + 1}</strong>
               {experiences.length > 1 && (
                 <button
                   type="button"
@@ -806,7 +806,7 @@ export default function Resume() {
               </Field>
 
               <Field label="진행 여부">
-                <label className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-[14px] py-[13px] text-[14px] font-extrabold text-slate-600">
+                <label className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-[14px] py-[13px] text-[14px] font-extrabold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
                   <input
                     type="checkbox"
                     checked={experience.isOngoing}
@@ -863,10 +863,10 @@ export default function Resume() {
         {essays.map((essay, index) => (
           <div
             key={index}
-            className="mb-4 rounded-[22px] border border-slate-200 bg-slate-100 p-5 last:mb-0"
+            className="mb-4 rounded-[22px] border border-slate-200 bg-slate-100 p-5 last:mb-0 dark:border-slate-700 dark:bg-slate-800"
           >
             <div className="mb-4 flex items-center justify-between gap-3">
-              <strong className="text-[16px] font-black">
+              <strong className="text-[16px] font-black text-slate-900 dark:text-white">
                 {index < 3 ? essay.label : `문항 ${index + 1}`}
               </strong>
               {essays.length > 3 && (
@@ -897,7 +897,7 @@ export default function Resume() {
                 value={essay.body}
                 onChange={(e) => updateArray(setEssays, index, "body", e.target.value)}
               />
-              <div className="mt-[6px] text-right font-mono text-[12px] font-extrabold text-slate-400">
+              <div className="mt-[6px] text-right font-mono text-[12px] font-extrabold text-slate-400 dark:text-slate-500">
                 {essay.body.length} / 1000자
               </div>
             </Field>
@@ -912,12 +912,12 @@ export default function Resume() {
         <label
           onDragOver={(e) => e.preventDefault()}
           onDrop={handleDrop}
-          className="block cursor-pointer rounded-[24px] border-2 border-dashed border-slate-200 bg-slate-100 p-[34px] text-center transition hover:border-blue-200 hover:bg-blue-50/40"
+          className="block cursor-pointer rounded-[24px] border-2 border-dashed border-slate-200 bg-slate-100 p-[34px] text-center transition hover:border-blue-200 hover:bg-blue-50/40 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-blue-800 dark:hover:bg-blue-950/40"
         >
-          <strong className="mb-2 block text-[17px] font-black">
+          <strong className="mb-2 block text-[17px] font-black text-slate-900 dark:text-white">
             파일을 드래그하거나 클릭해서 업로드하세요
           </strong>
-          <p className="text-[14px] leading-[1.6] text-slate-600">
+          <p className="text-[14px] leading-[1.6] text-slate-600 dark:text-slate-300">
             .pdf, .txt 파일을 여러 개 업로드할 수 있습니다. (파일당 최대 50MB)
           </p>
           <input
@@ -930,7 +930,7 @@ export default function Resume() {
         </label>
 
         {files.length > 0 && (
-          <div className="mt-[14px] flex flex-col gap-[10px] rounded-[18px] border border-emerald-200 bg-emerald-50 p-[14px] text-[14px] font-black text-emerald-600">
+          <div className="mt-[14px] flex flex-col gap-[10px] rounded-[18px] border border-emerald-200 bg-emerald-50 p-[14px] text-[14px] font-black text-emerald-600 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300">
             <div className="flex items-center justify-between gap-3">
               <span>업로드된 파일 {files.length}개</span>
               <button
@@ -946,9 +946,9 @@ export default function Resume() {
               {files.map((file, index) => (
                 <div
                   key={`${file.name}-${index}`}
-                  className="flex items-center justify-between gap-3 rounded-[14px] border border-emerald-200 bg-white px-3 py-[11px]"
+                  className="flex items-center justify-between gap-3 rounded-[14px] border border-emerald-200 bg-white px-3 py-[11px] dark:border-emerald-900 dark:bg-slate-900"
                 >
-                  <span className="truncate text-[13px] font-black text-slate-800">
+                  <span className="truncate text-[13px] font-black text-slate-800 dark:text-slate-200">
                     {file.name}
                   </span>
                   <button
@@ -958,7 +958,7 @@ export default function Resume() {
                         prev.filter((_, fileIndex) => fileIndex !== index)
                       )
                     }
-                    className="rounded-full border border-slate-200 px-3 py-1 text-[12px] font-black text-slate-600"
+                    className="rounded-full border border-slate-200 px-3 py-1 text-[12px] font-black text-slate-600 dark:border-slate-700 dark:text-slate-300"
                   >
                     삭제
                   </button>
@@ -982,10 +982,10 @@ export default function Resume() {
         {certificates.map((certificate, index) => (
           <div
             key={index}
-            className="mb-4 rounded-[22px] border border-slate-200 bg-slate-100 p-5 last:mb-0"
+            className="mb-4 rounded-[22px] border border-slate-200 bg-slate-100 p-5 last:mb-0 dark:border-slate-700 dark:bg-slate-800"
           >
             <div className="mb-4 flex items-center justify-between gap-3">
-              <strong className="text-[16px] font-black">
+              <strong className="text-[16px] font-black text-slate-900 dark:text-white">
                 자격증 {index + 1}
               </strong>
               {certificates.length > 1 && (
@@ -1008,7 +1008,7 @@ export default function Resume() {
                   className={`rounded-full border px-[14px] py-[9px] text-[13px] font-black ${
                     certificate.type === type
                       ? "border-blue-600 bg-blue-600 text-white"
-                      : "border-slate-200 bg-white text-slate-600"
+                      : "border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
                   }`}
                 >
                   {type}
@@ -1072,10 +1072,10 @@ export default function Resume() {
         {careers.map((career, index) => (
           <div
             key={index}
-            className="mb-4 rounded-[22px] border border-slate-200 bg-slate-100 p-5 last:mb-0"
+            className="mb-4 rounded-[22px] border border-slate-200 bg-slate-100 p-5 last:mb-0 dark:border-slate-700 dark:bg-slate-800"
           >
             <div className="mb-4 flex items-center justify-between gap-3">
-              <strong className="text-[16px] font-black">경력 {index + 1}</strong>
+              <strong className="text-[16px] font-black text-slate-900 dark:text-white">경력 {index + 1}</strong>
               {careers.length > 1 && (
                 <button
                   type="button"
@@ -1141,7 +1141,7 @@ export default function Resume() {
                   }
                 />
 
-                <label className="mt-2 flex items-center gap-2 text-[14px] font-extrabold text-slate-600">
+                <label className="mt-2 flex items-center gap-2 text-[14px] font-extrabold text-slate-600 dark:text-slate-300">
                   <input
                     type="checkbox"
                     checked={career.isWorking}
@@ -1199,9 +1199,9 @@ export default function Resume() {
         ))}
       </Section>
 
-      <div className="fixed bottom-0 left-0 right-0 z-50 flex h-[84px] items-center justify-center border-t border-slate-200 bg-white/90 backdrop-blur-xl">
+      <div className="fixed bottom-0 left-0 right-0 z-50 flex h-[84px] items-center justify-center border-t border-slate-200 bg-white/90 backdrop-blur-xl dark:border-slate-700 dark:bg-slate-950/90">
         <div className="flex w-full max-w-[1120px] items-center justify-between gap-4 px-10">
-          <p className="text-[14px] font-extrabold text-slate-600">
+          <p className="text-[14px] font-extrabold text-slate-600 dark:text-slate-300">
             최종 제출하면 AI가 이력서를 분석해 추천 정확도를 업데이트합니다.
           </p>
           <button
@@ -1215,14 +1215,14 @@ export default function Resume() {
       </div>
 
       <Modal open={missingModalOpen}>
-        <div className="w-full max-w-[520px] rounded-[28px] bg-white p-8 shadow-2xl">
-          <div className="mb-3 inline-flex rounded-full bg-blue-50 px-3 py-2 text-[12px] font-black text-blue-700">
+        <div className="w-full max-w-[520px] rounded-[28px] bg-white p-8 shadow-2xl dark:bg-slate-900">
+          <div className="mb-3 inline-flex rounded-full bg-blue-50 px-3 py-2 text-[12px] font-black text-blue-700 dark:bg-blue-950 dark:text-blue-300">
             AI 추천 정확도 확인
           </div>
-          <h3 className="mb-3 text-[24px] font-black tracking-[-0.6px] text-slate-900">
+          <h3 className="mb-3 text-[24px] font-black tracking-[-0.6px] text-slate-900 dark:text-white">
             더 정확한 AI 추천을 위해 확인이 필요해요
           </h3>
-          <p className="mb-5 text-[14px] font-bold leading-7 text-slate-600">
+          <p className="mb-5 text-[14px] font-bold leading-7 text-slate-600 dark:text-slate-300">
             아직 작성되지 않은 항목이 있습니다.
             <br />
             이력서를 더 완성하면 기업 추천 정확도가 향상됩니다.
@@ -1231,7 +1231,7 @@ export default function Resume() {
             {missingItems.map((item) => (
               <span
                 key={item}
-                className="rounded-full bg-red-50 px-3 py-2 text-[13px] font-black text-red-600"
+                className="rounded-full bg-red-50 px-3 py-2 text-[13px] font-black text-red-600 dark:bg-red-950 dark:text-red-300"
               >
                 {item}
               </span>
@@ -1257,14 +1257,14 @@ export default function Resume() {
       </Modal>
 
       <Modal open={completeModalOpen}>
-        <div className="w-full max-w-[620px] rounded-[30px] bg-white p-8 text-center shadow-2xl">
+        <div className="w-full max-w-[620px] rounded-[30px] bg-white p-8 text-center shadow-2xl dark:bg-slate-900">
           <div className="mx-auto mb-4 flex h-[58px] w-[58px] items-center justify-center rounded-full bg-emerald-500 text-[28px] font-black text-white">
             ✓
           </div>
-          <h3 className="mb-3 text-[26px] font-black tracking-[-0.8px] text-slate-900">
+          <h3 className="mb-3 text-[26px] font-black tracking-[-0.8px] text-slate-900 dark:text-white">
             이력서 제출이 완료되었습니다
           </h3>
-          <p className="mb-6 text-[14px] font-bold leading-7 text-slate-600">
+          <p className="mb-6 text-[14px] font-bold leading-7 text-slate-600 dark:text-slate-300">
             입력한 이력서 정보가 통합 프로필에 반영되었습니다.
             <br />
             AI가 프로필을 다시 분석해 기업 추천 정확도를 업데이트했습니다.
@@ -1275,11 +1275,11 @@ export default function Resume() {
               ["추천 반영", "AI 매칭 업데이트"],
               ["다음 단계", "추천 기업 확인"],
             ].map(([label, value]) => (
-              <div key={label} className="rounded-2xl bg-slate-100 p-4">
-                <div className="mb-1 text-[12px] font-black text-slate-500">
+              <div key={label} className="rounded-2xl bg-slate-100 p-4 dark:bg-slate-800">
+                <div className="mb-1 text-[12px] font-black text-slate-500 dark:text-slate-400">
                   {label}
                 </div>
-                <div className="text-[13px] font-black text-slate-900">
+                <div className="text-[13px] font-black text-slate-900 dark:text-white">
                   {value}
                 </div>
               </div>
@@ -1288,7 +1288,7 @@ export default function Resume() {
           <div className="flex justify-center gap-2">
             <button
               type="button"
-              onClick={() => navigate("/")}
+              onClick={() => navigate("/home")}
               className={secondaryButtonClass}
             >
               AI 커리어 홈으로 이동
@@ -1305,16 +1305,16 @@ export default function Resume() {
       </Modal>
 
       <Modal open={githubModalOpen}>
-        <div className="w-full max-w-[620px] rounded-[28px] bg-white p-7 shadow-2xl">
+        <div className="w-full max-w-[620px] rounded-[28px] bg-white p-7 shadow-2xl dark:bg-slate-900">
           <div className="mb-6 flex items-start justify-between gap-4">
             <div>
-              <div className="mb-3 inline-flex rounded-full bg-blue-50 px-3 py-2 text-[12px] font-black text-blue-700">
+              <div className="mb-3 inline-flex rounded-full bg-blue-50 px-3 py-2 text-[12px] font-black text-blue-700 dark:bg-blue-950 dark:text-blue-300">
                 GitHub 프로필 연동
               </div>
-              <h3 className="mb-2 text-[24px] font-black tracking-[-0.6px] text-slate-900">
+              <h3 className="mb-2 text-[24px] font-black tracking-[-0.6px] text-slate-900 dark:text-white">
                 GitHub 계정 정보를 입력해주세요
               </h3>
-              <p className="text-[14px] font-bold leading-7 text-slate-600">
+              <p className="text-[14px] font-bold leading-7 text-slate-600 dark:text-slate-300">
                 입력한 계정 정보를 기반으로 Repository, README, 사용 언어를 분석해
                 기술 스택 파싱에 활용합니다.
               </p>
@@ -1322,7 +1322,7 @@ export default function Resume() {
             <button
               type="button"
               onClick={() => setGithubModalOpen(false)}
-              className="h-9 w-9 rounded-full bg-slate-100 text-[20px] font-black text-slate-600"
+              className="h-9 w-9 rounded-full bg-slate-100 text-[20px] font-black text-slate-600 dark:bg-slate-800 dark:text-slate-300"
             >
               ×
             </button>
@@ -1363,7 +1363,7 @@ export default function Resume() {
             />
           </Field>
 
-          <div className="mb-6 rounded-2xl border border-blue-100 bg-blue-50 p-4 text-[13px] font-bold leading-6 text-slate-600">
+          <div className="mb-6 rounded-2xl border border-blue-100 bg-blue-50 p-4 text-[13px] font-bold leading-6 text-slate-600 dark:border-blue-900 dark:bg-blue-950 dark:text-slate-300">
             현재는 프론트 시연용 입력 모달입니다. 실제 GitHub OAuth/API 연동
             전까지는 입력한 정보를 localStorage에 저장해 화면 상태와 기술 스택
             분석 흐름을 시연합니다.
@@ -1389,7 +1389,7 @@ export default function Resume() {
       </Modal>
 
       <div
-        className={`fixed bottom-[104px] right-7 z-[999] rounded-full bg-slate-900 px-[18px] py-[13px] text-[14px] font-extrabold text-white transition-all ${
+        className={`fixed bottom-[104px] right-7 z-[999] rounded-full bg-slate-900 px-[18px] py-[13px] text-[14px] font-extrabold text-white transition-all dark:bg-white dark:text-slate-900 ${
           toast
             ? "translate-y-0 opacity-100"
             : "pointer-events-none translate-y-5 opacity-0"

@@ -44,12 +44,12 @@ export default function Home() {
   return (
     <AppLayout title="AI 커리어 홈">
       {showBanner && (
-        <div className="mb-[22px] flex items-center justify-between gap-[18px] rounded-[22px] border border-blue-100 bg-gradient-to-br from-blue-50 to-white px-5 py-[18px] shadow-[0_10px_30px_rgba(15,23,42,0.07)]">
+        <div className="mb-[22px] flex items-center justify-between gap-[18px] rounded-[22px] border border-blue-100 bg-gradient-to-br from-blue-50 to-white px-5 py-[18px] shadow-[0_10px_30px_rgba(15,23,42,0.07)] transition-colors dark:border-blue-900 dark:from-slate-900 dark:to-slate-800">
           <div>
-            <strong className="mb-[5px] block text-[16px] font-black text-slate-900">
+            <strong className="mb-[5px] block text-[16px] font-black text-slate-900 dark:text-white">
               이력서를 완성하고 더 정확한 추천을 받아보세요.
             </strong>
-            <p className="text-[13px] font-bold leading-[1.6] text-slate-600">
+            <p className="text-[13px] font-bold leading-[1.6] text-slate-600 dark:text-slate-300">
               현재 정보만으로도 기업 추천은 가능하지만, 최종 제출을 완료하면
               AI가 더 정확한 기업과 직무를 추천해드립니다.
             </p>
@@ -59,7 +59,7 @@ export default function Home() {
             <Link
               to="/resume"
               onClick={continueResume}
-              className="inline-flex rounded-full border border-blue-600 px-[19px] py-3 text-[14px] font-black text-blue-700 transition hover:-translate-y-0.5"
+              className="inline-flex rounded-full border border-blue-600 px-[19px] py-3 text-[14px] font-black text-blue-700 transition hover:-translate-y-0.5 dark:text-blue-300"
             >
               이력서 보완하기
             </Link>
@@ -67,7 +67,7 @@ export default function Home() {
             <button
               type="button"
               onClick={hideImproveBanner}
-              className="h-[34px] w-[34px] rounded-full border border-slate-200 bg-white text-slate-600 font-black"
+              className="h-[34px] w-[34px] rounded-full border border-slate-200 bg-white text-slate-600 font-black dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
             >
               ×
             </button>
@@ -143,12 +143,12 @@ export default function Home() {
       </section>
 
       <section className="mb-[22px] grid grid-cols-[1fr_1.35fr] gap-[22px]">
-        <article className="flex flex-col items-center gap-[18px] rounded-[26px] border border-slate-200 bg-white p-6 text-center shadow-[0_10px_30px_rgba(15,23,42,0.07)]">
+        <article className="flex flex-col items-center gap-[18px] rounded-[26px] border border-slate-200 bg-white p-6 text-center shadow-[0_10px_30px_rgba(15,23,42,0.07)] transition-colors dark:border-slate-700 dark:bg-slate-900">
           <div className="max-w-[280px]">
-            <h3 className="mb-[7px] text-[20px] font-black tracking-[-0.4px]">
+            <h3 className="mb-[7px] text-[20px] font-black tracking-[-0.4px] text-slate-900 dark:text-white">
               추천 정확도
             </h3>
-            <p className="text-[14px] font-bold leading-[1.6] text-slate-600">
+            <p className="text-[14px] font-bold leading-[1.6] text-slate-600 dark:text-slate-300">
               이력서를 조금 더 작성하면 기업 추천 품질이 올라갑니다.
             </p>
           </div>
@@ -159,9 +159,9 @@ export default function Home() {
               background: `conic-gradient(#2563eb 0 ${progress}%, #f1f5f9 ${progress}% 100%)`,
             }}
           >
-            <div className="absolute h-[116px] w-[116px] rounded-full bg-white" />
+            <div className="absolute h-[116px] w-[116px] rounded-full bg-white dark:bg-slate-900" />
             <div className="relative z-10 text-center">
-              <strong className="block text-[34px] font-black text-blue-700">
+              <strong className="block text-[34px] font-black text-blue-700 dark:text-blue-300">
                 {progress}%
               </strong>
               <span className="text-[12px] font-black text-slate-400">
@@ -170,7 +170,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="flex w-full items-center justify-center gap-2 rounded-[18px] bg-blue-50 px-[14px] py-[13px] text-[13px] font-black text-blue-800">
+          <div className="flex w-full items-center justify-center gap-2 rounded-[18px] bg-blue-50 px-[14px] py-[13px] text-[13px] font-black text-blue-800 dark:bg-blue-950 dark:text-blue-300">
             <span className="h-2 w-2 rounded-full bg-blue-600" />
             프로젝트 성과를 추가하면 더 정밀해져요
           </div>
@@ -183,12 +183,12 @@ export default function Home() {
             ].map(([label, value]) => (
               <div
                 key={label}
-                className="flex min-h-[72px] flex-col items-center justify-center gap-[5px] rounded-2xl bg-slate-100 px-2 py-3"
+                className="flex min-h-[72px] flex-col items-center justify-center gap-[5px] rounded-2xl bg-slate-100 px-2 py-3 dark:bg-slate-800"
               >
-                <span className="whitespace-nowrap text-[12px] font-extrabold text-slate-600">
+                <span className="whitespace-nowrap text-[12px] font-extrabold text-slate-600 dark:text-slate-300">
                   {label}
                 </span>
-                <strong className="whitespace-nowrap text-[12px] font-black text-slate-900">
+                <strong className="whitespace-nowrap text-[12px] font-black text-slate-900 dark:text-white">
                   {value}
                 </strong>
               </div>
@@ -196,18 +196,21 @@ export default function Home() {
           </div>
         </article>
 
-        <article className="rounded-[26px] border border-slate-200 bg-white p-6 shadow-[0_10px_30px_rgba(15,23,42,0.07)]">
+        <article className="rounded-[26px] border border-slate-200 bg-white p-6 shadow-[0_10px_30px_rgba(15,23,42,0.07)] transition-colors dark:border-slate-700 dark:bg-slate-900">
           <div className="mb-[18px] flex items-start justify-between gap-[14px]">
             <div>
-              <h3 className="mb-[7px] text-[20px] font-black tracking-[-0.4px]">
+              <h3 className="mb-[7px] text-[20px] font-black tracking-[-0.4px] text-slate-900 dark:text-white">
                 오늘의 추천 기업
               </h3>
-              <p className="text-[14px] font-bold leading-[1.6] text-slate-600">
+              <p className="text-[14px] font-bold leading-[1.6] text-slate-600 dark:text-slate-300">
                 현재 프로필 기준으로 적합도가 높은 기업입니다.
               </p>
             </div>
 
-            <Link to="/fitting" className="text-[13px] font-black text-blue-700">
+            <Link
+              to="/fitting"
+              className="text-[13px] font-black text-blue-700 dark:text-blue-300"
+            >
               전체 보기 →
             </Link>
           </div>
@@ -221,22 +224,22 @@ export default function Home() {
               <Link
                 key={title}
                 to="/fitting"
-                className="flex items-center gap-[14px] rounded-[20px] border border-slate-200 bg-white p-[15px] transition hover:-translate-y-0.5 hover:border-blue-100 hover:shadow-[0_10px_30px_rgba(15,23,42,0.07)]"
+                className="flex items-center gap-[14px] rounded-[20px] border border-slate-200 bg-white p-[15px] transition hover:-translate-y-0.5 hover:border-blue-100 hover:shadow-[0_10px_30px_rgba(15,23,42,0.07)] dark:border-slate-700 dark:bg-slate-800 dark:hover:border-blue-800"
               >
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[17px] bg-blue-50 font-black text-blue-700">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[17px] bg-blue-50 font-black text-blue-700 dark:bg-blue-950 dark:text-blue-300">
                   {logo}
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  <strong className="mb-1 block text-[15px] font-black">
+                  <strong className="mb-1 block text-[15px] font-black text-slate-900 dark:text-white">
                     {title}
                   </strong>
-                  <span className="block truncate text-[12px] font-extrabold text-slate-600">
+                  <span className="block truncate text-[12px] font-extrabold text-slate-600 dark:text-slate-300">
                     {desc}
                   </span>
                 </div>
 
-                <div className="font-mono text-[20px] font-black text-emerald-600">
+                <div className="font-mono text-[20px] font-black text-emerald-600 dark:text-emerald-400">
                   {score}
                 </div>
               </Link>
@@ -248,7 +251,7 @@ export default function Home() {
               (chip) => (
                 <span
                   key={chip}
-                  className="rounded-full bg-blue-50 px-[10px] py-[6px] text-[12px] font-black text-blue-800"
+                  className="rounded-full bg-blue-50 px-[10px] py-[6px] text-[12px] font-black text-blue-800 dark:bg-blue-950 dark:text-blue-300"
                 >
                   {chip}
                 </span>
@@ -267,16 +270,21 @@ export default function Home() {
         ].map(([num, title, desc, linkText, path]) => (
           <article
             key={num}
-            className="rounded-[22px] border border-slate-200 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.07)] transition hover:-translate-y-0.5 hover:border-blue-100"
+            className="rounded-[22px] border border-slate-200 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.07)] transition hover:-translate-y-0.5 hover:border-blue-100 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-blue-800"
           >
-            <div className="mb-[14px] flex h-[30px] w-[30px] items-center justify-center rounded-xl bg-blue-50 text-[13px] font-black text-blue-800">
+            <div className="mb-[14px] flex h-[30px] w-[30px] items-center justify-center rounded-xl bg-blue-50 text-[13px] font-black text-blue-800 dark:bg-blue-950 dark:text-blue-300">
               {num}
             </div>
-            <h4 className="mb-2 text-[16px] font-black">{title}</h4>
-            <p className="mb-[15px] text-[13px] font-bold leading-[1.65] text-slate-600">
+            <h4 className="mb-2 text-[16px] font-black text-slate-900 dark:text-white">
+              {title}
+            </h4>
+            <p className="mb-[15px] text-[13px] font-bold leading-[1.65] text-slate-600 dark:text-slate-300">
               {desc}
             </p>
-            <Link to={path} className="text-[13px] font-black text-blue-700">
+            <Link
+              to={path}
+              className="text-[13px] font-black text-blue-700 dark:text-blue-300"
+            >
               {linkText}
             </Link>
           </article>
@@ -291,13 +299,15 @@ export default function Home() {
         ].map(([label, value, desc]) => (
           <article
             key={label}
-            className="rounded-[22px] border border-slate-200 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.07)]"
+            className="rounded-[22px] border border-slate-200 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.07)] transition-colors dark:border-slate-700 dark:bg-slate-900"
           >
-            <span className="mb-2 block text-[13px] font-black text-slate-600">
+            <span className="mb-2 block text-[13px] font-black text-slate-600 dark:text-slate-300">
               {label}
             </span>
-            <strong className="text-[25px] font-black">{value}</strong>
-            <p className="mt-2 text-[12px] font-bold leading-[1.55] text-slate-400">
+            <strong className="text-[25px] font-black text-slate-900 dark:text-white">
+              {value}
+            </strong>
+            <p className="mt-2 text-[12px] font-bold leading-[1.55] text-slate-400 dark:text-slate-500">
               {desc}
             </p>
           </article>

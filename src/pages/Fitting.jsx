@@ -111,7 +111,9 @@ function BookmarkIcon({ active }) {
     <svg
       viewBox="0 0 24 24"
       className={`h-[19px] w-[19px] ${
-        active ? "fill-blue-600/20 stroke-blue-600" : "fill-none stroke-slate-500"
+        active
+          ? "fill-blue-600/20 stroke-blue-600 dark:fill-blue-400/20 dark:stroke-blue-300"
+          : "fill-none stroke-slate-500 dark:stroke-slate-400"
       }`}
       strokeWidth="2"
       strokeLinecap="round"
@@ -227,7 +229,7 @@ export default function Fitting() {
             <div className="mt-[18px] flex flex-wrap gap-[10px]">
               <a
                 href="#recommendations"
-                className="inline-flex items-center justify-center rounded-full bg-white px-[18px] py-3 text-[14px] font-black text-blue-700 transition hover:-translate-y-0.5"
+                className="inline-flex items-center justify-center rounded-full bg-white px-[18px] py-3 text-[14px] font-black text-blue-700 transition hover:-translate-y-0.5 dark:bg-white dark:text-blue-700"
               >
                 추천 기업 보기
               </a>
@@ -237,7 +239,7 @@ export default function Fitting() {
                 onClick={() =>
                   localStorage.setItem("articlue_resume_continue", "true")
                 }
-                className="inline-flex items-center justify-center rounded-full border border-white/50 px-[18px] py-3 text-[14px] font-black text-white transition hover:-translate-y-0.5"
+                className="inline-flex items-center justify-center rounded-full border border-white/50 px-[18px] py-3 text-[14px] font-black text-white transition hover:-translate-y-0.5 hover:bg-white/10"
               >
                 이력서 보완하기
               </Link>
@@ -285,10 +287,10 @@ export default function Fitting() {
           className="mb-3 mt-5 flex scroll-mt-[92px] items-end justify-between gap-4"
         >
           <div>
-            <h2 className="mb-[6px] text-[22px] font-black tracking-[-0.5px] text-slate-900">
+            <h2 className="mb-[6px] text-[22px] font-black tracking-[-0.5px] text-slate-900 dark:text-white">
               상위 추천 기업 3개
             </h2>
-            <p className="break-keep text-[14px] font-bold leading-[1.6] text-slate-600">
+            <p className="break-keep text-[14px] font-bold leading-[1.6] text-slate-600 dark:text-slate-300">
               매칭률보다 중요한 것은 추천 근거입니다. 각 기업 카드에서 왜
               추천됐는지 먼저 확인해보세요.
             </p>
@@ -298,10 +300,10 @@ export default function Fitting() {
             {["적합도순", "백엔드", "자소서 가능"].map((chip, index) => (
               <span
                 key={chip}
-                className={`rounded-full border px-3 py-2 text-[13px] font-black ${
+                className={`rounded-full border px-3 py-2 text-[13px] font-black transition-colors ${
                   index === 0
-                    ? "border-blue-100 bg-blue-50 text-blue-800"
-                    : "border-slate-200 bg-white text-slate-600"
+                    ? "border-blue-100 bg-blue-50 text-blue-800 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-300"
+                    : "border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
                 }`}
               >
                 {chip}
@@ -320,38 +322,38 @@ export default function Fitting() {
                 <article
                   key={company.id}
                   onClick={() => setSelectedId(company.id)}
-                  className={`min-h-[142px] cursor-pointer rounded-[22px] border bg-white px-[18px] py-4 shadow-[0_10px_30px_rgba(15,23,42,0.07)] transition hover:-translate-y-0.5 hover:border-blue-100 ${
+                  className={`min-h-[142px] cursor-pointer rounded-[22px] border bg-white px-[18px] py-4 shadow-[0_10px_30px_rgba(15,23,42,0.07)] transition hover:-translate-y-0.5 hover:border-blue-100 dark:bg-slate-900 ${
                     active
-                      ? "border-blue-600 shadow-[0_14px_36px_rgba(37,99,235,0.13)]"
-                      : "border-slate-200"
+                      ? "border-blue-600 shadow-[0_14px_36px_rgba(37,99,235,0.13)] dark:border-blue-500"
+                      : "border-slate-200 dark:border-slate-700"
                   }`}
                 >
                   <div className="mb-[10px] grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 font-black text-blue-700">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 font-black text-blue-700 dark:bg-blue-950 dark:text-blue-300">
                       {company.logo}
                     </div>
 
                     <div className="min-w-0">
-                      <div className="mb-1 text-[18px] font-black text-slate-900">
+                      <div className="mb-1 text-[18px] font-black text-slate-900 dark:text-white">
                         {company.company}
                       </div>
-                      <div className="text-[13px] font-extrabold text-slate-600">
+                      <div className="text-[13px] font-extrabold text-slate-600 dark:text-slate-300">
                         {company.role}
                       </div>
                     </div>
 
                     <div>
-                      <div className="text-right text-[28px] font-black tracking-[-0.8px] text-emerald-600">
+                      <div className="text-right text-[28px] font-black tracking-[-0.8px] text-emerald-600 dark:text-emerald-400">
                         {company.score}
                       </div>
-                      <div className="mt-[3px] text-right text-[12px] font-black text-slate-400">
+                      <div className="mt-[3px] text-right text-[12px] font-black text-slate-400 dark:text-slate-500">
                         직무 적합도
                       </div>
                     </div>
                   </div>
 
-                  <div className="mb-[10px] rounded-2xl bg-slate-100 px-[14px] py-[11px]">
-                    <strong className="mb-2 block text-[13px] font-black text-blue-800">
+                  <div className="mb-[10px] rounded-2xl bg-slate-100 px-[14px] py-[11px] dark:bg-slate-800">
+                    <strong className="mb-2 block text-[13px] font-black text-blue-800 dark:text-blue-300">
                       왜 추천됐나요?
                     </strong>
 
@@ -359,7 +361,7 @@ export default function Fitting() {
                       {company.reasons.map((reason) => (
                         <li
                           key={reason}
-                          className="flex break-keep text-[13px] font-bold leading-[1.55] text-slate-600 before:mt-2 before:mr-2 before:h-[6px] before:w-[6px] before:shrink-0 before:rounded-full before:bg-blue-600 before:content-['']"
+                          className="flex break-keep text-[13px] font-bold leading-[1.55] text-slate-600 before:mr-2 before:mt-2 before:h-[6px] before:w-[6px] before:shrink-0 before:rounded-full before:bg-blue-600 before:content-[''] dark:text-slate-300"
                         >
                           {reason}
                         </li>
@@ -373,8 +375,8 @@ export default function Fitting() {
                         key={stack}
                         className={`rounded-full px-[10px] py-[7px] text-[12px] font-black ${
                           index === company.stacks.length - 1
-                            ? "bg-slate-100 text-slate-600"
-                            : "bg-blue-50 text-blue-800"
+                            ? "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                            : "bg-blue-50 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
                         }`}
                       >
                         {stack}
@@ -389,7 +391,7 @@ export default function Fitting() {
                         event.stopPropagation();
                         generateResume(company);
                       }}
-                      className="inline-flex items-center justify-center rounded-full bg-blue-600 px-[18px] py-3 text-[14px] font-black text-white transition hover:-translate-y-0.5"
+                      className="inline-flex items-center justify-center rounded-full bg-blue-600 px-[18px] py-3 text-[14px] font-black text-white transition hover:-translate-y-0.5 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
                     >
                       맞춤 자소서 생성
                     </button>
@@ -400,7 +402,7 @@ export default function Fitting() {
                         event.stopPropagation();
                         goInterview(company);
                       }}
-                      className="inline-flex items-center justify-center rounded-full border border-blue-600 px-[18px] py-3 text-[14px] font-black text-blue-700 transition hover:-translate-y-0.5"
+                      className="inline-flex items-center justify-center rounded-full border border-blue-600 bg-white px-[18px] py-3 text-[14px] font-black text-blue-700 transition hover:-translate-y-0.5 hover:bg-blue-50 dark:border-blue-500 dark:bg-slate-900 dark:text-blue-300 dark:hover:bg-blue-950/50"
                     >
                       실전 면접 준비
                     </button>
@@ -413,8 +415,8 @@ export default function Fitting() {
                       }}
                       className={`flex h-11 w-11 items-center justify-center rounded-2xl border transition hover:-translate-y-0.5 ${
                         liked
-                          ? "border-blue-600 bg-blue-50"
-                          : "border-slate-200 bg-white hover:border-blue-600 hover:bg-blue-50"
+                          ? "border-blue-600 bg-blue-50 dark:border-blue-500 dark:bg-blue-950"
+                          : "border-slate-200 bg-white hover:border-blue-600 hover:bg-blue-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-blue-500 dark:hover:bg-blue-950/50"
                       }`}
                       aria-label={`${company.company} 공고 찜하기`}
                     >
@@ -427,7 +429,7 @@ export default function Fitting() {
           </div>
 
           <aside
-            className="grid min-h-[142px] grid-cols-[auto_minmax(170px,.85fr)_minmax(280px,1.15fr)_minmax(300px,1fr)_minmax(150px,.55fr)] items-center gap-[14px] rounded-[22px] border border-blue-100 bg-white px-[18px] py-4 shadow-[0_10px_30px_rgba(15,23,42,0.07)]"
+            className="grid min-h-[142px] grid-cols-[auto_minmax(170px,.85fr)_minmax(280px,1.15fr)_minmax(300px,1fr)_minmax(150px,.55fr)] items-center gap-[14px] rounded-[22px] border border-blue-100 bg-white px-[18px] py-4 shadow-[0_10px_30px_rgba(15,23,42,0.07)] dark:border-blue-900 dark:bg-slate-900"
             aria-label="선택 기업 준비 패널"
           >
             <div className="flex h-[50px] w-[50px] rotate-[-6deg] items-center justify-center rounded-xl bg-[#13c85a] text-center text-[11px] font-black leading-none tracking-[-0.5px] text-white shadow-[0_8px_18px_rgba(16,185,129,0.18)]">
@@ -437,22 +439,22 @@ export default function Fitting() {
             </div>
 
             <div>
-              <h3 className="mb-2 text-[20px] font-black tracking-[-0.4px] text-slate-900">
+              <h3 className="mb-2 text-[20px] font-black tracking-[-0.4px] text-slate-900 dark:text-white">
                 {selected.panel.title}
               </h3>
-              <p className="break-keep text-[13px] font-bold leading-[1.6] text-slate-600">
+              <p className="break-keep text-[13px] font-bold leading-[1.6] text-slate-600 dark:text-slate-300">
                 {selected.panel.desc}
               </p>
             </div>
 
-            <div className="rounded-2xl border border-blue-100 bg-gradient-to-b from-blue-50 to-white p-[14px]">
-              <div className="mb-2 text-[12px] font-black text-blue-800">
+            <div className="rounded-2xl border border-blue-100 bg-gradient-to-b from-blue-50 to-white p-[14px] dark:border-blue-900 dark:from-blue-950/45 dark:to-slate-900">
+              <div className="mb-2 text-[12px] font-black text-blue-800 dark:text-blue-300">
                 맞춤 자소서 방향
               </div>
-              <div className="mb-[6px] text-[14px] font-black text-slate-900">
+              <div className="mb-[6px] text-[14px] font-black text-slate-900 dark:text-white">
                 {selected.panel.previewTitle}
               </div>
-              <p className="break-keep text-[12px] font-bold leading-[1.55] text-slate-600">
+              <p className="break-keep text-[12px] font-bold leading-[1.55] text-slate-600 dark:text-slate-300">
                 {selected.panel.previewText}
               </p>
             </div>
@@ -465,12 +467,12 @@ export default function Fitting() {
               ].map(([num, label]) => (
                 <div
                   key={num}
-                  className="rounded-2xl border border-slate-200 bg-slate-100 px-[10px] py-[11px] text-center"
+                  className="rounded-2xl border border-slate-200 bg-slate-100 px-[10px] py-[11px] text-center dark:border-slate-700 dark:bg-slate-800"
                 >
-                  <span className="mb-[7px] inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-50 text-[12px] font-black text-blue-800">
+                  <span className="mb-[7px] inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-50 text-[12px] font-black text-blue-800 dark:bg-blue-950 dark:text-blue-300">
                     {num}
                   </span>
-                  <strong className="block text-[12px] font-black leading-[1.35] text-slate-900">
+                  <strong className="block text-[12px] font-black leading-[1.35] text-slate-900 dark:text-white">
                     {label}
                   </strong>
                 </div>
@@ -481,7 +483,7 @@ export default function Fitting() {
               <button
                 type="button"
                 onClick={() => generateResume(selected)}
-                className="rounded-full bg-blue-600 px-[18px] py-3 text-[14px] font-black text-white transition hover:-translate-y-0.5"
+                className="rounded-full bg-blue-600 px-[18px] py-3 text-[14px] font-black text-white transition hover:-translate-y-0.5 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
               >
                 자소서 생성
               </button>
@@ -489,7 +491,7 @@ export default function Fitting() {
               <button
                 type="button"
                 onClick={() => goInterview(selected)}
-                className="rounded-full border border-blue-600 px-[18px] py-3 text-[14px] font-black text-blue-700 transition hover:-translate-y-0.5"
+                className="rounded-full border border-blue-600 bg-white px-[18px] py-3 text-[14px] font-black text-blue-700 transition hover:-translate-y-0.5 hover:bg-blue-50 dark:border-blue-500 dark:bg-slate-900 dark:text-blue-300 dark:hover:bg-blue-950/50"
               >
                 면접 준비
               </button>
@@ -500,36 +502,36 @@ export default function Fitting() {
 
       {essayModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 p-6">
-          <div className="w-full max-w-[720px] rounded-[28px] border border-slate-200 bg-white p-[26px] shadow-[0_24px_80px_rgba(15,23,42,0.25)]">
+          <div className="w-full max-w-[720px] rounded-[28px] border border-slate-200 bg-white p-[26px] shadow-[0_24px_80px_rgba(15,23,42,0.25)] dark:border-slate-700 dark:bg-slate-900">
             <div className="mb-4 flex items-start justify-between gap-4">
-              <h3 className="text-[22px] font-black text-slate-900">
+              <h3 className="text-[22px] font-black text-slate-900 dark:text-white">
                 {essayModal.essay.title}
               </h3>
 
               <button
                 type="button"
                 onClick={() => setEssayModal(null)}
-                className="h-9 w-9 rounded-full bg-slate-100 text-[14px] font-black text-slate-600"
+                className="h-9 w-9 rounded-full bg-slate-100 text-[14px] font-black text-slate-600 dark:bg-slate-800 dark:text-slate-300"
                 aria-label="닫기"
               >
                 ✕
               </button>
             </div>
 
-            <div className="mb-3 rounded-[20px] border border-slate-200 bg-slate-100 p-[18px]">
-              <strong className="mb-2 block text-[14px] font-black text-blue-800">
+            <div className="mb-3 rounded-[20px] border border-slate-200 bg-slate-100 p-[18px] dark:border-slate-700 dark:bg-slate-800">
+              <strong className="mb-2 block text-[14px] font-black text-blue-800 dark:text-blue-300">
                 지원 동기
               </strong>
-              <p className="text-[14px] font-bold leading-[1.75] text-slate-600">
+              <p className="text-[14px] font-bold leading-[1.75] text-slate-600 dark:text-slate-300">
                 {essayModal.essay.motivation}
               </p>
             </div>
 
-            <div className="mb-3 rounded-[20px] border border-slate-200 bg-slate-100 p-[18px]">
-              <strong className="mb-2 block text-[14px] font-black text-blue-800">
+            <div className="mb-3 rounded-[20px] border border-slate-200 bg-slate-100 p-[18px] dark:border-slate-700 dark:bg-slate-800">
+              <strong className="mb-2 block text-[14px] font-black text-blue-800 dark:text-blue-300">
                 프로젝트 경험
               </strong>
-              <p className="text-[14px] font-bold leading-[1.75] text-slate-600">
+              <p className="text-[14px] font-bold leading-[1.75] text-slate-600 dark:text-slate-300">
                 {essayModal.essay.project}
               </p>
             </div>
@@ -537,8 +539,10 @@ export default function Fitting() {
             <div className="mt-4 flex justify-end gap-[9px]">
               <button
                 type="button"
-                onClick={() => showToast("자소서가 내 커리어 관리에 저장되었습니다.")}
-                className="rounded-full bg-blue-600 px-[18px] py-3 text-[14px] font-black text-white"
+                onClick={() =>
+                  showToast("자소서가 내 커리어 관리에 저장되었습니다.")
+                }
+                className="rounded-full bg-blue-600 px-[18px] py-3 text-[14px] font-black text-white transition-colors hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
               >
                 자소서 저장
               </button>
@@ -546,7 +550,7 @@ export default function Fitting() {
               <button
                 type="button"
                 onClick={() => setEssayModal(null)}
-                className="rounded-full border border-blue-600 px-[18px] py-3 text-[14px] font-black text-blue-700"
+                className="rounded-full border border-blue-600 bg-white px-[18px] py-3 text-[14px] font-black text-blue-700 transition-colors hover:bg-blue-50 dark:border-blue-500 dark:bg-slate-900 dark:text-blue-300 dark:hover:bg-blue-950/50"
               >
                 닫기
               </button>
@@ -556,7 +560,7 @@ export default function Fitting() {
       )}
 
       <div
-        className={`fixed bottom-7 right-7 z-[120] rounded-full bg-slate-900 px-[18px] py-[13px] text-[14px] font-black text-white transition-all ${
+        className={`fixed bottom-7 right-7 z-[120] rounded-full bg-slate-900 px-[18px] py-[13px] text-[14px] font-black text-white transition-all dark:bg-white dark:text-slate-900 ${
           toast
             ? "translate-y-0 opacity-100"
             : "pointer-events-none translate-y-5 opacity-0"
