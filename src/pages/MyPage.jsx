@@ -187,7 +187,6 @@ export default function MyPage() {
 
   const latestInterview = interviewResults[0];
   const firstFavorite = favorites[0];
-  const latestCoverLetter = coverLetters[0];
 
   const activityItems = useMemo(() => {
     const interviewActivities = interviewResults.map((result) => ({
@@ -213,13 +212,56 @@ export default function MyPage() {
       .slice(0, 6);
   }, [interviewResults, coverLetters]);
 
-  const nextActionTitle = firstFavorite
-    ? `${firstFavorite.company} 맞춤 자소서 작성`
-    : "추천 기업 지원 전략 확인하기";
+  const nextActionItems = useMemo(() => {
+    const actions = [];
 
-  const nextActionDesc = firstFavorite
-    ? `${firstFavorite.company} ${firstFavorite.role} 공고를 기준으로 맞춤 자소서와 면접 질문을 연결합니다.`
-    : "커리어 피팅에서 관심 기업을 찜하면 맞춤 지원 전략을 이어갈 수 있습니다.";
+    if (progress < 70) {
+      actions.push([
+        "이력서 완성도 먼저 높이기",
+        `현재 프로필 완성도는 ${progress}%입니다. 추천 정확도를 높이려면 이력서 보완이 우선입니다.`,
+        "/resume",
+        "보완하기",
+      ]);
+    }
+
+    if (coverLetters.length === 0) {
+      actions.push([
+        "맞춤 자소서 먼저 생성하기",
+        "아직 저장된 맞춤 자소서가 없습니다. 추천 기업 기준으로 자소서 초안을 먼저 생성해보세요.",
+        firstFavorite
+          ? `/fitting?company=${encodeURIComponent(firstFavorite.company)}`
+          : "/fitting",
+        "생성하기",
+      ]);
+    }
+
+    if (latestInterview && Number(latestInterview.score) < 80) {
+      actions.push([
+        `${latestInterview.company} 면접 재도전`,
+        `최근 면접 점수는 ${latestInterview.score}점입니다. 꼬리질문 대응을 다시 훈련하는 것이 좋습니다.`,
+        `/interview?company=${encodeURIComponent(latestInterview.company)}`,
+        "재도전",
+      ]);
+    }
+
+    if (firstFavorite) {
+      actions.push([
+        `${firstFavorite.company} 지원 준비 이어가기`,
+        `${firstFavorite.company} ${firstFavorite.role} 공고를 기준으로 자소서와 면접 준비를 이어갈 수 있습니다.`,
+        `/fitting?company=${encodeURIComponent(firstFavorite.company)}`,
+        "이어가기",
+      ]);
+    }
+
+    actions.push([
+      "성장 리포트 다시 확인하기",
+      "현재 이력서, 자소서, 면접 결과를 바탕으로 부족한 역량을 점검해보세요.",
+      "/growth",
+      "확인하기",
+    ]);
+
+    return actions.slice(0, 3);
+  }, [progress, coverLetters.length, latestInterview, firstFavorite]);
 
   const currentUser = (() => {
     try {
@@ -737,38 +779,7 @@ export default function MyPage() {
             </div>
 
             <div className="grid gap-3">
-              {[
-                [
-                  nextActionTitle,
-                  nextActionDesc,
-                  firstFavorite
-                    ? `/fitting?company=${encodeURIComponent(
-                        firstFavorite.company
-                      )}`
-                    : "/fitting",
-                  firstFavorite ? "이어가기" : "추천 보기",
-                ],
-                [
-                  "비즈니스 임팩트 문장 보완",
-                  "기술 경험을 성과 중심 문장으로 재작성합니다.",
-                  "/resume",
-                  "수정하기",
-                ],
-                [
-                  latestInterview
-                    ? `${latestInterview.company} 면접 재도전`
-                    : "실전 압박 면접 도전",
-                  latestInterview
-                    ? `최근 ${latestInterview.score}점 결과를 바탕으로 다시 훈련합니다.`
-                    : "꼬리질문 대응을 실전처럼 훈련합니다.",
-                  latestInterview
-                    ? `/interview?company=${encodeURIComponent(
-                        latestInterview.company
-                      )}`
-                    : "/interview",
-                  "면접 시작",
-                ],
-              ].map(([title, desc, path, label]) => (
+              {nextActionItems.map(([title, desc, path, label]) => (
                 <div
                   key={title}
                   className="flex items-center justify-between gap-[14px] rounded-[20px] border border-slate-200 bg-white p-[15px] dark:border-slate-700 dark:bg-slate-800"
@@ -783,7 +794,7 @@ export default function MyPage() {
                   </div>
                   <Link
                     to={path}
-                    className="rounded-full border border-blue-600 px-[15px] py-[9px] text-[13px] font-black text-blue-700 dark:text-blue-300"
+                    className="shrink-0 rounded-full border border-blue-600 px-[15px] py-[9px] text-[13px] font-black text-blue-700 dark:text-blue-300"
                   >
                     {label}
                   </Link>
