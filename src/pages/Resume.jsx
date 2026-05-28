@@ -1,13 +1,113 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AppLayout from "../components/AppLayout.jsx";
-import TechStackSelector from "../components/TechStackSelector.jsx";
 
 const RESUME_DRAFT_KEY = "articlue_resume_draft";
 const RESUME_PROGRESS_KEY = "articlue_resume_progress";
 const PROFILE_NAME_KEY = "articlue_profile_name";
 const GITHUB_KEY = "articlue_github_connection";
 const TECH_STACK_KEY = "articlue-resume-techs";
+
+const programmingLanguages = [
+  "Python",
+  "JavaScript",
+  "TypeScript",
+  "Java",
+  "Kotlin",
+  "Swift",
+  "Dart",
+  "C#",
+  "C++",
+  "Go",
+  "PHP",
+  "Ruby",
+  "Rust",
+  "Scala",
+  "R",
+  "HTML/CSS",
+];
+
+const languageFrameworkMap = {
+  Python: [
+    "FastAPI",
+    "Django",
+    "Flask",
+    "PyTorch",
+    "TensorFlow",
+    "Pandas",
+    "Scikit-Learn",
+    "Numpy",
+    "LangChain",
+  ],
+  JavaScript: ["React", "Vue.js", "Next.js", "Svelte", "Node.js", "Express", "NestJS"],
+  TypeScript: ["React", "Next.js", "Node.js", "NestJS", "Express", "Prisma"],
+  Java: ["Spring", "Spring Boot", "JPA", "MyBatis", "Gradle", "Maven"],
+  Kotlin: ["Spring Boot", "Android", "Ktor", "Coroutine", "Jetpack Compose"],
+  Swift: ["iOS", "SwiftUI", "UIKit", "Combine", "CoreData"],
+  Dart: ["Flutter", "Firebase", "Riverpod", "Bloc"],
+  "C#": [".NET", "ASP.NET", "Unity", "Entity Framework"],
+  "C++": ["STL", "Qt", "Unreal Engine", "OpenCV"],
+  Go: ["Gin", "Echo", "Fiber", "GORM", "gRPC"],
+  PHP: ["Laravel", "Symfony", "CodeIgniter", "Composer"],
+  Ruby: ["Ruby on Rails", "Sinatra", "RSpec"],
+  Rust: ["Actix", "Rocket", "Tokio", "Axum"],
+  Scala: ["Akka", "Play Framework", "Spark"],
+  R: ["Tidyverse", "Shiny", "ggplot2", "dplyr"],
+  "HTML/CSS": ["React", "Vue.js", "TailwindCSS", "Sass", "Bootstrap", "Styled Components"],
+};
+
+const commonTechGroups = [
+  {
+    label: "Database",
+    items: [
+      "MySQL",
+      "PostgreSQL",
+      "MongoDB",
+      "Redis",
+      "Oracle",
+      "MariaDB",
+      "Elasticsearch",
+    ],
+  },
+  {
+    label: "DevOps & Cloud",
+    items: [
+      "AWS",
+      "Docker",
+      "Kubernetes",
+      "GCP",
+      "Azure",
+      "GitHub Actions",
+      "Jenkins",
+      "Terraform",
+    ],
+  },
+  {
+    label: "Tools & Collaboration",
+    items: ["Git", "GitHub", "Jira", "Figma", "Slack", "Notion"],
+  },
+];
+
+const allSelectableTechs = new Set([
+  ...programmingLanguages,
+  ...Object.values(languageFrameworkMap).flat(),
+  ...commonTechGroups.flatMap((group) => group.items),
+]);
+
+function sanitizeTechStacks(techs) {
+  if (!Array.isArray(techs)) return [];
+
+  return techs
+    .map((tech) => {
+      if (typeof tech === "string") return tech;
+      return tech?.name || tech?.label || tech?.value || "";
+    })
+    .filter((tech, index, array) => {
+      if (!tech) return false;
+      if (!allSelectableTechs.has(tech)) return false;
+      return array.indexOf(tech) === index;
+    });
+}
 
 const initialForm = {
   title: "",
@@ -149,6 +249,136 @@ function ChoiceGroup({ value, options, onChange }) {
   );
 }
 
+
+function TechStackBlock({ selectedTechs, onChange }) {
+  const cleanSelectedTechs = sanitizeTechStacks(selectedTechs);
+
+  const selectedLanguages = programmingLanguages.filter((language) =>
+    cleanSelectedTechs.includes(language)
+  );
+
+  const toggleTech = (tech) => {
+    const exists = cleanSelectedTechs.includes(tech);
+
+    if (programmingLanguages.includes(tech)) {
+      if (exists) {
+        const relatedStacks = languageFrameworkMap[tech] || [];
+
+        const nextTechs = cleanSelectedTechs.filter(
+          (item) => item !== tech && !relatedStacks.includes(item)
+        );
+
+        onChange(nextTechs);
+        return;
+      }
+
+      onChange([...cleanSelectedTechs, tech]);
+      return;
+    }
+
+    const nextTechs = exists
+      ? cleanSelectedTechs.filter((item) => item !== tech)
+      : [...cleanSelectedTechs, tech];
+
+    onChange(nextTechs);
+  };
+
+  const renderTechButton = (tech) => {
+    const active = cleanSelectedTechs.includes(tech);
+
+    return (
+      <button
+        key={tech}
+        type="button"
+        onClick={() => toggleTech(tech)}
+        className={`rounded-full border px-[17px] py-[10px] text-[14px] font-bold transition ${
+          active
+            ? "border-blue-600 bg-blue-600 text-white shadow-[0_8px_18px_rgba(37,99,235,0.18)]"
+            : "border-slate-200 bg-white text-slate-900 hover:border-blue-200 hover:bg-blue-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-blue-700 dark:hover:bg-blue-950/40"
+        }`}
+      >
+        {tech}
+      </button>
+    );
+  };
+
+  return (
+    <div className="mt-6 border-t border-slate-200 pt-6 dark:border-slate-700">
+      <div className="mb-6">
+        <h3 className="mb-2 text-[15px] font-black text-slate-900 dark:text-white">
+          사용 가능한 프로그래밍 언어
+        </h3>
+
+        <p className="mb-3 break-keep text-[14px] font-bold leading-[1.6] text-slate-600 dark:text-slate-300">
+          주력으로 사용하는 언어를 먼저 선택해주세요. 선택한 언어에 맞는 기술
+          스택이 아래에 표시됩니다.
+        </p>
+
+        <div className="flex flex-wrap gap-2">
+          {programmingLanguages.map(renderTechButton)}
+        </div>
+      </div>
+
+      {selectedLanguages.length === 0 && (
+        <div className="mb-6 rounded-[20px] border border-dashed border-blue-200 bg-blue-50/80 px-5 py-5 text-[14px] font-bold leading-[1.7] text-blue-700 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-300">
+          사용 언어를 선택하면 해당 언어 기반의 프레임워크 및 라이브러리가
+          아래에 자동으로 표시됩니다.
+        </div>
+      )}
+
+      {selectedLanguages.length > 0 && (
+        <div className="mb-6 rounded-[24px] border border-slate-200 bg-slate-50/70 p-5 dark:border-slate-700 dark:bg-slate-900/40">
+          <h3 className="mb-3 text-[15px] font-black text-slate-900 dark:text-white">
+            관련 프레임워크 및 라이브러리
+          </h3>
+
+          <div className="flex flex-col gap-5">
+            {selectedLanguages.map((language) => (
+              <div key={language}>
+                <div className="mb-2 text-[14px] font-black text-slate-900 dark:text-white">
+                  [{language}] 관련 스택
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {(languageFrameworkMap[language] || []).map(renderTechButton)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="mb-6">
+        <h3 className="mb-2 text-[15px] font-black text-slate-900 dark:text-white">
+          데이터베이스 및 공통 기술 (DevOps, Tools 등)
+        </h3>
+
+        {commonTechGroups.map((group) => (
+          <div key={group.label} className="mb-4 last:mb-0">
+            <div className="mb-2 text-[14px] font-black text-slate-900 dark:text-white">
+              {group.label}
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {group.items.map(renderTechButton)}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-5 rounded-[18px] border border-blue-100 bg-blue-50 px-4 py-[14px] text-[13px] font-extrabold leading-[1.6] text-blue-800 dark:border-blue-900 dark:bg-blue-950/50 dark:text-blue-300">
+        선택된 기술 스택 {cleanSelectedTechs.length}개
+        {cleanSelectedTechs.length > 0 && (
+          <span className="ml-1 font-bold">
+            · {cleanSelectedTechs.slice(0, 8).join(", ")}
+            {cleanSelectedTechs.length > 8 ? " 외" : ""}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function Modal({ open, children }) {
   if (!open) return null;
 
@@ -178,16 +408,17 @@ export default function Resume() {
   const navigate = useNavigate();
   const savedDraft = readJson(RESUME_DRAFT_KEY, null);
   const savedGithub = readJson(GITHUB_KEY, initialGithub);
-  const savedTechs = readJson(TECH_STACK_KEY, []);
+  const savedTechs = sanitizeTechStacks(readJson(TECH_STACK_KEY, []));
 
   const [form, setForm] = useState(() => ({
     ...initialForm,
     ...(savedDraft?.form || {}),
   }));
 
-  const [techStacks, setTechStacks] = useState(() =>
-    savedDraft?.techStacks?.length ? savedDraft.techStacks : savedTechs
-  );
+  const [techStacks, setTechStacks] = useState(() => {
+    const draftTechs = sanitizeTechStacks(savedDraft?.techStacks || []);
+    return draftTechs.length ? draftTechs : savedTechs;
+  });
 
   const [experiences, setExperiences] = useState(() =>
     savedDraft?.experiences?.length ? savedDraft.experiences : [initialExperience]
@@ -319,7 +550,14 @@ export default function Resume() {
     };
 
     localStorage.setItem(RESUME_DRAFT_KEY, JSON.stringify(draft));
-    localStorage.setItem(TECH_STACK_KEY, JSON.stringify(techStacks));
+    const cleanTechStacks = sanitizeTechStacks(techStacks);
+
+    if (cleanTechStacks.length !== techStacks.length) {
+      setTechStacks(cleanTechStacks);
+      return;
+    }
+
+    localStorage.setItem(TECH_STACK_KEY, JSON.stringify(cleanTechStacks));
   }, [form, techStacks, experiences, essays, certificates, careers, files, github]);
 
   const showToast = (message) => {
@@ -660,17 +898,17 @@ export default function Resume() {
             </select>
           </Field>
         </div>
-      </Section>
 
-      <div id="section-tech-stack" className="mb-6">
-        <TechStackSelector
-          selectedTechs={techStacks}
-          onChange={(nextTechs) => {
-            setTechStacks(nextTechs);
-            showToast("기술 스택이 저장되었습니다.");
-          }}
-        />
-      </div>
+        <div id="section-tech-stack">
+          <TechStackBlock
+            selectedTechs={techStacks}
+            onChange={(nextTechs) => {
+              setTechStacks(sanitizeTechStacks(nextTechs));
+              showToast("기술 스택이 저장되었습니다.");
+            }}
+          />
+        </div>
+      </Section>
 
       <Section
         id="section-education"

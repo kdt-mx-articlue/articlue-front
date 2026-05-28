@@ -1,5 +1,7 @@
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
+
+const INTERVIEW_RESULT_KEY = "articlue_interview_results";
 
 const companyOptions = [
   "네이버웹툰 - Backend",
@@ -17,6 +19,8 @@ const followUpQuestion =
   "방금 답변에서 비용과 안정성의 균형을 언급하셨습니다. 그렇다면 사용자 경험을 해치지 않는 선에서 어떤 데이터를 먼저 캐시에서 제거할지 판단하는 기준은 무엇인가요?";
 
 export default function Interview() {
+  const [searchParams] = useSearchParams();
+
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [view, setView] = useState("setup");
   const [company, setCompany] = useState("네이버웹툰 - Backend");
@@ -75,7 +79,9 @@ export default function Interview() {
     const previousHtmlBg = document.documentElement.style.backgroundColor;
 
     document.body.style.backgroundColor = isDarkMode ? "#020617" : "#f8fafc";
-    document.documentElement.style.backgroundColor = isDarkMode ? "#020617" : "#f8fafc";
+    document.documentElement.style.backgroundColor = isDarkMode
+      ? "#020617"
+      : "#f8fafc";
 
     return () => {
       document.body.style.backgroundColor = previousBodyBg;
@@ -84,13 +90,26 @@ export default function Interview() {
   }, [isDarkMode]);
 
   useEffect(() => {
+    const queryCompany = searchParams.get("company");
+
+    if (queryCompany) {
+      const matched = companyOptions.find((option) =>
+        option.includes(queryCompany)
+      );
+
+      if (matched) {
+        setCompany(matched);
+        return;
+      }
+    }
+
     const savedCompany = localStorage.getItem("articlue_interview_company");
     const savedRole = localStorage.getItem("articlue_interview_role");
 
     if (savedCompany) {
       setCompany(`${savedCompany} - ${savedRole || "Backend"}`);
     }
-  }, []);
+  }, [searchParams]);
 
   const summary = useMemo(() => {
     const [companyName, roleName = "Developer"] = company.split(" - ");
@@ -119,6 +138,42 @@ export default function Interview() {
   const showToast = (message) => {
     setToast(message);
     window.setTimeout(() => setToast(""), 2500);
+  };
+
+  const saveInterviewResult = () => {
+    const answeredCount = messages.filter(
+      (message) => message.type === "user"
+    ).length;
+
+    const score = answeredCount >= 3 ? 88 : answeredCount >= 1 ? 82 : 76;
+
+    const resultData = {
+      id: Date.now(),
+      company: summary.companyName,
+      role: summary.roleName,
+      portfolio,
+      difficulty,
+      persona,
+      score,
+      answeredCount,
+      questionCount: summary.countNumber,
+      timeText: summary.timeText,
+      createdAt: new Date().toISOString(),
+    };
+
+    try {
+      const saved = JSON.parse(
+        localStorage.getItem(INTERVIEW_RESULT_KEY) || "[]"
+      );
+
+      const next = Array.isArray(saved)
+        ? [resultData, ...saved]
+        : [resultData];
+
+      localStorage.setItem(INTERVIEW_RESULT_KEY, JSON.stringify(next));
+    } catch {
+      localStorage.setItem(INTERVIEW_RESULT_KEY, JSON.stringify([resultData]));
+    }
   };
 
   const resetSettings = () => {
@@ -191,9 +246,10 @@ export default function Interview() {
     showToast("면접 리포트를 생성 중입니다.");
 
     window.setTimeout(() => {
+      saveInterviewResult();
       setAnalysis(false);
       setView("result");
-      showToast("면접 결과가 생성되었습니다.");
+      showToast("면접 결과가 내 커리어 관리에 저장되었습니다.");
     }, 1400);
   };
 
@@ -604,7 +660,11 @@ function SummaryView({
             ["👤", "면접관 페르소나", persona],
             ["💬", "질문 구성", `총 ${summary.countNumber}문항 · 꼬리질문 포함`],
             ["⏱️", "예상 소요 시간", summary.timeText],
-            ["✅", "평가 기준", "기술 정확도, 문제 해결 과정, 비즈니스 임팩트, 커뮤니케이션"],
+            [
+              "✅",
+              "평가 기준",
+              "기술 정확도, 문제 해결 과정, 비즈니스 임팩트, 커뮤니케이션",
+            ],
           ]}
         />
 
@@ -860,7 +920,9 @@ function FragmentStep({ num, label, active, showLine }) {
           {label}
         </strong>
       </div>
-      {showLine && <div className="h-[2px] rounded-full bg-slate-200 dark:bg-slate-700" />}
+      {showLine && (
+        <div className="h-[2px] rounded-full bg-slate-200 dark:bg-slate-700" />
+      )}
     </>
   );
 }

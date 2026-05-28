@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import AppLayout from "../components/AppLayout.jsx";
 
 const FAVORITE_KEY = "articlue_favorite_jobs";
@@ -126,6 +126,8 @@ function BookmarkIcon({ active }) {
 }
 
 export default function Fitting() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [selectedId, setSelectedId] = useState("naver");
   const [favorites, setFavorites] = useState([]);
   const [toast, setToast] = useState("");
@@ -135,6 +137,18 @@ export default function Fitting() {
     () => companies.find((company) => company.id === selectedId) || companies[0],
     [selectedId]
   );
+
+  useEffect(() => {
+    const companyName = searchParams.get("company");
+
+    if (!companyName) return;
+
+    const matched = companies.find((company) => company.company === companyName);
+
+    if (matched) {
+      setSelectedId(matched.id);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     try {
@@ -187,7 +201,9 @@ export default function Fitting() {
   const generateResume = (company) => {
     setSelectedId(company.id);
 
-    const saved = JSON.parse(localStorage.getItem("articlue_cover_letters") || "{}");
+    const saved = JSON.parse(
+      localStorage.getItem("articlue_cover_letters") || "{}"
+    );
 
     localStorage.setItem(
       "articlue_cover_letters",
@@ -196,6 +212,7 @@ export default function Fitting() {
         [company.id]: {
           지원동기: company.essay.motivation,
           프로젝트경험: company.essay.project,
+          savedAt: new Date().toISOString(),
         },
       })
     );
@@ -208,7 +225,7 @@ export default function Fitting() {
     setSelectedId(company.id);
     localStorage.setItem("articlue_interview_company", company.company);
     localStorage.setItem("articlue_interview_role", company.role);
-    showToast("선택 기업 기준으로 면접 준비 화면으로 이동합니다.");
+    navigate(`/interview?company=${encodeURIComponent(company.company)}`);
   };
 
   return (

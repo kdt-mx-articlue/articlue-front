@@ -1,5 +1,7 @@
 import { createBrowserRouter } from "react-router-dom";
 
+import ProtectedRoute from "../components/ProtectedRoute.jsx";
+
 import Onboarding from "../pages/Onboarding.jsx";
 import Home from "../pages/Home.jsx";
 import Login from "../pages/Login.jsx";
@@ -9,43 +11,83 @@ import Fitting from "../pages/Fitting.jsx";
 import Growth from "../pages/Growth.jsx";
 import Interview from "../pages/Interview.jsx";
 import MyPage from "../pages/MyPage.jsx";
+import KakaoCallback from "../pages/KakaoCallback.jsx";
+import NaverCallback from "../pages/NaverCallback.jsx";
 
 const router = createBrowserRouter([
   {
     path: "/",
     element: <Onboarding />,
   },
+
   {
     path: "/home",
     element: <Home />,
   },
+
   {
     path: "/login",
     element: <Login />,
   },
+
   {
     path: "/signup",
     element: <Signup />,
   },
+
   {
     path: "/resume",
-    element: <Resume />,
+    element: (
+      <ProtectedRoute>
+        <Resume />
+      </ProtectedRoute>
+    ),
   },
+
   {
     path: "/fitting",
-    element: <Fitting />,
+    element: (
+      <ProtectedRoute>
+        <Fitting />
+      </ProtectedRoute>
+    ),
   },
+
   {
     path: "/growth",
-    element: <Growth />,
+    element: (
+      <ProtectedRoute>
+        <Growth />
+      </ProtectedRoute>
+    ),
   },
+
   {
     path: "/interview",
-    element: <Interview />,
+    element: (
+      <ProtectedRoute>
+        <Interview />
+      </ProtectedRoute>
+    ),
   },
+
   {
     path: "/mypage",
-    element: <MyPage />,
+    element: (
+      <ProtectedRoute>
+        <MyPage />
+      </ProtectedRoute>
+    ),
+  },
+
+  {
+    path: "/auth/kakao/callback",
+    element: <KakaoCallback />,
+  },
+
+  {
+    path: "/auth/naver/callback",
+    element: <NaverCallback />,
   },
 ]);
 

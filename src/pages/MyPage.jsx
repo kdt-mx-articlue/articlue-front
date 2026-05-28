@@ -1,6 +1,10 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import AppLayout from "../components/AppLayout.jsx";
+import { isAuthenticated, clearAuthStorage } from "../utils/auth.js";
+
+const INTERVIEW_RESULT_KEY = "articlue_interview_results";
+const COVER_LETTER_KEY = "articlue_cover_letters";
 
 const FAVORITE_KEYS = [
   "articlue_favorite_jobs",
@@ -9,12 +13,15 @@ const FAVORITE_KEYS = [
   "articlueLikedJobs",
 ];
 
+const COMPANY_NAME_MAP = {
+  naver: "네이버웹툰",
+  toss: "토스",
+  kakao: "카카오",
+};
+
 function applyDocumentTheme(theme) {
-  if (theme === "dark") {
-    document.documentElement.classList.add("dark");
-  } else {
-    document.documentElement.classList.remove("dark");
-  }
+  if (theme === "dark") document.documentElement.classList.add("dark");
+  else document.documentElement.classList.remove("dark");
 }
 
 function normalizeJobs(jobs) {
@@ -42,15 +49,54 @@ function readFavoriteJobs() {
       if (!raw) continue;
 
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length) {
-        return normalizeJobs(parsed);
-      }
+      if (Array.isArray(parsed) && parsed.length) return normalizeJobs(parsed);
     } catch {
       // ignore
     }
   }
 
   return [];
+}
+
+function readInterviewResults() {
+  try {
+    const parsed = JSON.parse(
+      localStorage.getItem(INTERVIEW_RESULT_KEY) || "[]"
+    );
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function readCoverLetters() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(COVER_LETTER_KEY) || "{}");
+
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return [];
+    }
+
+    return Object.entries(parsed).map(([companyId, content]) => {
+      const motivation =
+        content?.지원동기 || content?.motivation || "지원동기 내용이 없습니다.";
+      const project =
+        content?.프로젝트경험 ||
+        content?.project ||
+        "프로젝트 경험 내용이 없습니다.";
+
+      return {
+        id: companyId,
+        company: COMPANY_NAME_MAP[companyId] || companyId,
+        title: `[${COMPANY_NAME_MAP[companyId] || companyId}] 맞춤 자소서 초안`,
+        motivation,
+        project,
+        savedAt: content?.savedAt || null,
+      };
+    });
+  } catch {
+    return [];
+  }
 }
 
 function readTechStacks() {
@@ -82,11 +128,39 @@ function readProgress() {
   return 72;
 }
 
+function formatDate(value) {
+  if (!value) return "최근 기록";
+
+  try {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "최근 기록";
+
+    return date.toLocaleDateString("ko-KR", {
+      month: "short",
+      day: "numeric",
+      weekday: "short",
+    });
+  } catch {
+    return "최근 기록";
+  }
+}
+
+function getTimestamp(value) {
+  if (!value) return 0;
+  const time = new Date(value).getTime();
+  return Number.isNaN(time) ? 0 : time;
+}
+
 export default function MyPage() {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
 
+  const [authChecked, setAuthChecked] = useState(false);
   const [favorites, setFavorites] = useState([]);
+  const [interviewResults, setInterviewResults] = useState([]);
+  const [coverLetters, setCoverLetters] = useState([]);
+  const [selectedInterviewReport, setSelectedInterviewReport] = useState(null);
+  const [selectedCoverLetter, setSelectedCoverLetter] = useState(null);
   const [profileImage, setProfileImage] = useState("");
   const [toast, setToast] = useState("");
   const [activeTab, setActiveTab] = useState("resume");
@@ -111,7 +185,33 @@ export default function MyPage() {
       ? `신입 · Backend Developer · ${techStacks.slice(0, 3).join("/")} 중심`
       : "신입 · Backend Developer · 기술스택 미입력";
 
+  const latestInterview = interviewResults[0];
   const firstFavorite = favorites[0];
+  const latestCoverLetter = coverLetters[0];
+
+  const activityItems = useMemo(() => {
+    const interviewActivities = interviewResults.map((result) => ({
+      id: `interview-${result.id || result.company}-${result.createdAt}`,
+      title: `${result.company} ${result.role} 면접 리포트 생성`,
+      meta: `${formatDate(result.createdAt)} · 종합 ${result.score}점`,
+      type: "면접 리포트",
+      timestamp: getTimestamp(result.createdAt),
+    }));
+
+    const coverLetterActivities = coverLetters.map((letter) => ({
+      id: `cover-${letter.id}`,
+      title: `${letter.company} 맞춤 자소서 초안 저장`,
+      meta: letter.savedAt
+        ? `${formatDate(letter.savedAt)} · 맞춤 자소서`
+        : "최근 · 맞춤 자소서",
+      type: "맞춤 자소서",
+      timestamp: getTimestamp(letter.savedAt),
+    }));
+
+    return [...interviewActivities, ...coverLetterActivities]
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .slice(0, 6);
+  }, [interviewResults, coverLetters]);
 
   const nextActionTitle = firstFavorite
     ? `${firstFavorite.company} 맞춤 자소서 작성`
@@ -121,18 +221,34 @@ export default function MyPage() {
     ? `${firstFavorite.company} ${firstFavorite.role} 공고를 기준으로 맞춤 자소서와 면접 질문을 연결합니다.`
     : "커리어 피팅에서 관심 기업을 찜하면 맞춤 지원 전략을 이어갈 수 있습니다.";
 
+  const currentUser = (() => {
+    try {
+      return JSON.parse(localStorage.getItem("articlue_current_user") || "null");
+    } catch {
+      return null;
+    }
+  })();
+
   const profileName =
     localStorage.getItem("articlue_profile_name") ||
-    JSON.parse(localStorage.getItem("articlue_current_user") || "null")?.name ||
+    currentUser?.name ||
     "사용자";
 
   const refreshPageData = () => {
     setFavorites(readFavoriteJobs());
+    setInterviewResults(readInterviewResults());
+    setCoverLetters(readCoverLetters());
     setProfileImage(localStorage.getItem("articlue_profile_image") || "");
     setProgress(readProgress());
   };
 
   useEffect(() => {
+    if (!isAuthenticated()) {
+      navigate("/login", { replace: true });
+      return;
+    }
+
+    setAuthChecked(true);
     refreshPageData();
 
     const savedTheme = localStorage.getItem("articlue-theme") || "light";
@@ -140,11 +256,19 @@ export default function MyPage() {
     applyDocumentTheme(savedTheme);
 
     const handleStorage = (event) => {
+      if (event.key === "isLogin" || event.key === "articlue_current_user") {
+        if (!isAuthenticated()) {
+          navigate("/login", { replace: true });
+        }
+      }
+
       if (
         FAVORITE_KEYS.includes(event.key) ||
         event.key === "articlue_resume_progress" ||
         event.key === "articlue_profile_image" ||
-        event.key === "articlue_profile_name"
+        event.key === "articlue_profile_name" ||
+        event.key === INTERVIEW_RESULT_KEY ||
+        event.key === COVER_LETTER_KEY
       ) {
         refreshPageData();
       }
@@ -156,7 +280,14 @@ export default function MyPage() {
       }
     };
 
-    const handleFocus = () => refreshPageData();
+    const handleFocus = () => {
+      if (!isAuthenticated()) {
+        navigate("/login", { replace: true });
+        return;
+      }
+
+      refreshPageData();
+    };
 
     window.addEventListener("storage", handleStorage);
     window.addEventListener("focus", handleFocus);
@@ -165,7 +296,7 @@ export default function MyPage() {
       window.removeEventListener("storage", handleStorage);
       window.removeEventListener("focus", handleFocus);
     };
-  }, []);
+  }, [navigate]);
 
   const showToast = (message) => {
     setToast(message);
@@ -191,9 +322,9 @@ export default function MyPage() {
   };
 
   const confirmLogout = () => {
-    localStorage.removeItem("articlue_current_user");
-    localStorage.removeItem("isLogin");
-    navigate("/login");
+    clearAuthStorage();
+    setLogoutOpen(false);
+    navigate("/login", { replace: true });
   };
 
   const removeFavorite = (id) => {
@@ -232,6 +363,8 @@ export default function MyPage() {
     setProfileImage("");
     showToast("기본 프로필 이미지로 변경되었습니다.");
   };
+
+  if (!authChecked) return null;
 
   return (
     <AppLayout title="내 커리어 관리">
@@ -414,13 +547,15 @@ export default function MyPage() {
 
                   <div className="flex flex-wrap gap-2">
                     <Link
-                      to="/fitting"
+                      to={`/fitting?company=${encodeURIComponent(job.company)}`}
                       className="rounded-full bg-blue-600 px-[14px] py-[9px] text-[12px] font-black text-white"
                     >
                       맞춤 자소서 작성
                     </Link>
                     <Link
-                      to="/interview"
+                      to={`/interview?company=${encodeURIComponent(
+                        job.company
+                      )}`}
                       className="rounded-full border border-blue-600 bg-white px-[14px] py-[9px] text-[12px] font-black text-blue-700 transition-colors hover:bg-blue-50 dark:border-blue-500 dark:bg-slate-900 dark:text-blue-300 dark:hover:bg-blue-950/50"
                     >
                       AI 면접 시작
@@ -438,7 +573,6 @@ export default function MyPage() {
             </div>
           )}
         </section>
-
 
         <section className="mb-[22px] grid grid-cols-[1fr_.9fr] gap-[22px]">
           <div className="rounded-[26px] border border-slate-200 bg-white p-[25px] shadow-[0_10px_30px_rgba(15,23,42,0.07)] dark:border-slate-700 dark:bg-slate-900">
@@ -503,8 +637,12 @@ export default function MyPage() {
               {[
                 ["포트폴리오 완성도", `${progress}%`, progress],
                 ["최근 AI 분석 상태", submitted ? "분석 완료" : "보완 권장", 64],
-                ["최근 면접 결과", "85점", null],
-                ["추천 기업 적합도 평균", `${matchScore}%`, null],
+                [
+                  "최근 면접 결과",
+                  latestInterview ? `${latestInterview.score}점` : "기록 없음",
+                  null,
+                ],
+                ["저장된 자소서", `${coverLetters.length}개`, null],
               ].map(([label, value, bar]) => (
                 <div
                   key={label}
@@ -554,31 +692,37 @@ export default function MyPage() {
                 최근 활동 타임라인
               </h2>
               <p className="text-[14px] text-slate-600 dark:text-slate-300">
-                최근 생성·분석·면접 기록을 시간순으로 정리했습니다.
+                저장된 맞춤 자소서와 면접 리포트를 최신순으로 정리했습니다.
               </p>
             </div>
 
             <div className="grid gap-3">
-              {[
-                ["1", "네이버웹툰 Backend 공고 분석 완료", "오늘 · JD 적합도 89%"],
-                ["2", "RAG 실전 압박 면접 리포트 생성", "어제 · 종합 85점"],
-                ["3", "Redis 성과 표현 보완 필요 진단", "2일 전 · 성장 진단"],
-                ["4", "토스 맞춤형 자소서 초안 저장", "3일 전 · 맞춤 자소서"],
-              ].map(([num, title, meta]) => (
-                <div key={num} className="grid grid-cols-[34px_1fr] gap-3">
-                  <div className="flex h-[34px] w-[34px] items-center justify-center rounded-[14px] bg-blue-50 font-black text-blue-700 dark:bg-blue-950 dark:text-blue-300">
-                    {num}
-                  </div>
-                  <div>
-                    <div className="mb-1 text-[14px] font-black text-slate-900 dark:text-white">
-                      {title}
+              {activityItems.length > 0 ? (
+                activityItems.map((item, index) => (
+                  <div
+                    key={item.id}
+                    className="grid grid-cols-[34px_1fr] gap-3"
+                  >
+                    <div className="flex h-[34px] w-[34px] items-center justify-center rounded-[14px] bg-blue-50 font-black text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                      {index + 1}
                     </div>
-                    <div className="text-[12px] font-extrabold text-slate-400 dark:text-slate-500">
-                      {meta}
+                    <div>
+                      <div className="mb-1 text-[14px] font-black text-slate-900 dark:text-white">
+                        {item.title}
+                      </div>
+                      <div className="text-[12px] font-extrabold text-slate-400 dark:text-slate-500">
+                        {item.meta} · {item.type}
+                      </div>
                     </div>
                   </div>
+                ))
+              ) : (
+                <div className="rounded-[22px] border border-dashed border-slate-200 bg-slate-100 p-6 text-center text-[14px] font-extrabold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                  아직 저장된 활동 기록이 없습니다.
+                  <br />
+                  자소서 생성이나 면접 완료 후 이곳에 표시됩니다.
                 </div>
-              ))}
+              )}
             </div>
           </div>
 
@@ -597,7 +741,11 @@ export default function MyPage() {
                 [
                   nextActionTitle,
                   nextActionDesc,
-                  "/fitting",
+                  firstFavorite
+                    ? `/fitting?company=${encodeURIComponent(
+                        firstFavorite.company
+                      )}`
+                    : "/fitting",
                   firstFavorite ? "이어가기" : "추천 보기",
                 ],
                 [
@@ -607,9 +755,17 @@ export default function MyPage() {
                   "수정하기",
                 ],
                 [
-                  "실전 압박 면접 재도전",
-                  "최근 면접 약점인 꼬리질문 대응을 다시 훈련합니다.",
-                  "/interview",
+                  latestInterview
+                    ? `${latestInterview.company} 면접 재도전`
+                    : "실전 압박 면접 도전",
+                  latestInterview
+                    ? `최근 ${latestInterview.score}점 결과를 바탕으로 다시 훈련합니다.`
+                    : "꼬리질문 대응을 실전처럼 훈련합니다.",
+                  latestInterview
+                    ? `/interview?company=${encodeURIComponent(
+                        latestInterview.company
+                      )}`
+                    : "/interview",
                   "면접 시작",
                 ],
               ].map(([title, desc, path, label]) => (
@@ -668,62 +824,329 @@ export default function MyPage() {
             ))}
           </div>
 
-          <div className="grid gap-3">
-            {(activeTab === "resume"
-              ? [
-                  [
-                    "[네이버웹툰] Backend 맞춤형 이력서",
-                    "생성일: 2026.05.04 · 기업 인재상 맞춤 버전",
-                  ],
-                  [
-                    "[토스] Server Developer 자소서 초안",
-                    "생성일: 2026.05.02 · 서비스 운영 경험 강조 버전",
-                  ],
-                ]
-              : activeTab === "interview"
-              ? [
-                  [
-                    "💬 [토스] RAG 실전 면접 피드백 리포트",
-                    "면접일: 2026.05.03 · 종합 점수 85점",
-                  ],
-                ]
-              : [
-                  [
-                    "📈 포트폴리오 약점 진단 리포트",
-                    "진단일: 2026.05.01 · Redis 성과 표현 보완 권장",
-                  ],
-                ]
-            ).map(([title, meta]) => (
-              <article
-                key={title}
-                className="flex items-center justify-between gap-4 rounded-[20px] border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800"
-              >
+          {activeTab === "resume" && (
+            coverLetters.length > 0 ? (
+              <div className="grid gap-3">
+                {coverLetters.map((letter) => (
+                  <article
+                    key={letter.id}
+                    className="grid grid-cols-[1fr_auto] items-center gap-4 rounded-[22px] border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800"
+                  >
+                    <div>
+                      <div className="mb-2 flex flex-wrap gap-2">
+                        <span className="rounded-full bg-blue-50 px-[10px] py-[6px] text-[12px] font-black text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                          맞춤 자소서
+                        </span>
+                        <span className="rounded-full bg-slate-100 px-[10px] py-[6px] text-[12px] font-black text-slate-500 dark:bg-slate-900 dark:text-slate-400">
+                          {letter.company}
+                        </span>
+                      </div>
+
+                      <h3 className="mb-2 text-[18px] font-black text-slate-900 dark:text-white">
+                        {letter.title}
+                      </h3>
+                      <p className="line-clamp-2 break-keep text-[13px] font-extrabold leading-[1.65] text-slate-600 dark:text-slate-300">
+                        {letter.motivation}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCoverLetter(letter)}
+                        className="rounded-full border border-blue-600 px-[16px] py-[10px] text-[13px] font-black text-blue-700 dark:text-blue-300"
+                      >
+                        내용 보기
+                      </button>
+                      <Link
+                        to={`/fitting?company=${encodeURIComponent(
+                          letter.company
+                        )}`}
+                        className="rounded-full bg-blue-600 px-[16px] py-[10px] text-[13px] font-black text-white"
+                      >
+                        이어서 준비
+                      </Link>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-[22px] border border-dashed border-slate-200 bg-slate-100 p-7 text-center text-[14px] font-extrabold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                저장된 맞춤 자소서가 없습니다.
+                <br />
+                커리어 피팅에서 맞춤 자소서를 생성해보세요.
+              </div>
+            )
+          )}
+
+          {activeTab === "interview" && (
+            interviewResults.length > 0 ? (
+              <div className="grid grid-cols-1 gap-3">
+                {interviewResults.map((result) => (
+                  <article
+                    key={result.id || `${result.company}-${result.createdAt}`}
+                    className="grid grid-cols-[1fr_auto] items-center gap-4 rounded-[22px] border border-slate-200 bg-white p-5 transition hover:-translate-y-0.5 hover:shadow-[0_10px_30px_rgba(15,23,42,0.07)] dark:border-slate-700 dark:bg-slate-800"
+                  >
+                    <div>
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <span className="rounded-full bg-blue-50 px-[10px] py-[6px] text-[12px] font-black text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                          RAG 면접 리포트
+                        </span>
+                        <span className="rounded-full bg-slate-100 px-[10px] py-[6px] text-[12px] font-black text-slate-500 dark:bg-slate-900 dark:text-slate-400">
+                          {formatDate(result.createdAt)}
+                        </span>
+                      </div>
+
+                      <h3 className="mb-2 text-[18px] font-black text-slate-900 dark:text-white">
+                        {result.company} {result.role} 면접 결과
+                      </h3>
+
+                      <div className="flex flex-wrap gap-2">
+                        <span className="rounded-full border border-slate-200 bg-slate-100 px-[10px] py-[7px] text-[12px] font-black text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                          답변 {result.answeredCount ?? 0}개
+                        </span>
+                        <span className="rounded-full border border-slate-200 bg-slate-100 px-[10px] py-[7px] text-[12px] font-black text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                          총 {result.questionCount ?? 5}문항
+                        </span>
+                        <span className="rounded-full border border-slate-200 bg-slate-100 px-[10px] py-[7px] text-[12px] font-black text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                          {result.difficulty || "실전 압박"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex min-w-[190px] flex-col items-end gap-3">
+                      <div className="text-right">
+                        <span className="block text-[12px] font-black text-slate-400">
+                          종합 점수
+                        </span>
+                        <strong className="text-[34px] font-black text-blue-700 dark:text-blue-300">
+                          {result.score}점
+                        </strong>
+                      </div>
+
+                      <div className="flex flex-wrap justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedInterviewReport(result)}
+                          className="rounded-full border border-blue-600 px-[16px] py-[10px] text-[13px] font-black text-blue-700 dark:text-blue-300"
+                        >
+                          내용 보기
+                        </button>
+
+                        <Link
+                          to={`/interview?company=${encodeURIComponent(
+                            result.company
+                          )}`}
+                          className="rounded-full bg-blue-600 px-[16px] py-[10px] text-[13px] font-black text-white"
+                        >
+                          다시 면접
+                        </Link>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-[22px] border border-dashed border-slate-200 bg-slate-100 p-7 text-center text-[14px] font-extrabold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                저장된 면접 리포트가 없습니다.
+                <br />
+                면접을 완료하면 이곳에 자동으로 저장됩니다.
+              </div>
+            )
+          )}
+
+          {activeTab === "growth" && (
+            <div className="grid gap-3">
+              <article className="flex items-center justify-between gap-4 rounded-[20px] border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
                 <div>
                   <div className="mb-1 font-black text-slate-900 dark:text-white">
-                    {title}
+                    📈 포트폴리오 약점 진단 리포트
                   </div>
                   <div className="text-[13px] font-extrabold text-slate-600 dark:text-slate-300">
-                    {meta}
+                    Redis 성과 표현 보완 권장 · 인프라 경험 보완 필요
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => showToast("상세 화면은 추후 연동됩니다.")}
+                <Link
+                  to="/growth"
                   className="rounded-full bg-blue-600 px-[17px] py-[10px] text-[13px] font-black text-white"
                 >
                   내용 보기
-                </button>
+                </Link>
               </article>
-            ))}
-          </div>
+            </div>
+          )}
         </section>
 
+        {selectedCoverLetter && (
+          <div className="fixed inset-0 z-[2200] flex items-center justify-center bg-slate-900/55 p-6 backdrop-blur-md">
+            <div className="w-full max-w-[720px] rounded-[30px] border border-slate-200 bg-white p-[28px] shadow-[0_28px_90px_rgba(15,23,42,0.28)] dark:border-slate-700 dark:bg-slate-900">
+              <div className="mb-5 flex items-start justify-between gap-4">
+                <div>
+                  <span className="mb-3 inline-flex rounded-full bg-blue-50 px-[12px] py-[7px] text-[12px] font-black text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                    맞춤 자소서 상세
+                  </span>
+                  <h3 className="text-[26px] font-black tracking-[-0.7px] text-slate-900 dark:text-white">
+                    {selectedCoverLetter.company} 맞춤 자소서
+                  </h3>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedCoverLetter(null)}
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-[16px] font-black text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="mb-4 rounded-[22px] border border-slate-200 bg-slate-100 p-5 dark:border-slate-700 dark:bg-slate-800">
+                <h4 className="mb-3 text-[15px] font-black text-blue-700 dark:text-blue-300">
+                  지원 동기
+                </h4>
+                <p className="break-keep text-[14px] font-extrabold leading-[1.75] text-slate-600 dark:text-slate-300">
+                  {selectedCoverLetter.motivation}
+                </p>
+              </div>
+
+              <div className="rounded-[22px] border border-slate-200 bg-slate-100 p-5 dark:border-slate-700 dark:bg-slate-800">
+                <h4 className="mb-3 text-[15px] font-black text-blue-700 dark:text-blue-300">
+                  프로젝트 경험
+                </h4>
+                <p className="break-keep text-[14px] font-extrabold leading-[1.75] text-slate-600 dark:text-slate-300">
+                  {selectedCoverLetter.project}
+                </p>
+              </div>
+
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSelectedCoverLetter(null)}
+                  className="rounded-full border border-slate-200 bg-white px-[18px] py-3 text-[14px] font-black text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                >
+                  닫기
+                </button>
+
+                <Link
+                  to={`/fitting?company=${encodeURIComponent(
+                    selectedCoverLetter.company
+                  )}`}
+                  className="rounded-full bg-blue-600 px-[18px] py-3 text-[14px] font-black text-white"
+                >
+                  이 기업 준비 이어가기
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {selectedInterviewReport && (
+          <div className="fixed inset-0 z-[2200] flex items-center justify-center bg-slate-900/55 p-6 backdrop-blur-md">
+            <div className="w-full max-w-[720px] rounded-[30px] border border-slate-200 bg-white p-[28px] shadow-[0_28px_90px_rgba(15,23,42,0.28)] dark:border-slate-700 dark:bg-slate-900">
+              <div className="mb-5 flex items-start justify-between gap-4">
+                <div>
+                  <span className="mb-3 inline-flex rounded-full bg-blue-50 px-[12px] py-[7px] text-[12px] font-black text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                    RAG 면접 상세 리포트
+                  </span>
+                  <h3 className="text-[26px] font-black tracking-[-0.7px] text-slate-900 dark:text-white">
+                    {selectedInterviewReport.company} 면접 결과
+                  </h3>
+                  <p className="mt-2 text-[14px] font-extrabold text-slate-600 dark:text-slate-300">
+                    {selectedInterviewReport.role} ·{" "}
+                    {formatDate(selectedInterviewReport.createdAt)}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedInterviewReport(null)}
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-[16px] font-black text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="mb-5 grid grid-cols-[.75fr_1.25fr] gap-4">
+                <div className="rounded-[24px] bg-blue-50 p-5 text-center dark:bg-blue-950">
+                  <span className="mb-2 block text-[12px] font-black text-blue-700 dark:text-blue-300">
+                    종합 점수
+                  </span>
+                  <strong className="text-[48px] font-black leading-none text-blue-700 dark:text-blue-300">
+                    {selectedInterviewReport.score}
+                  </strong>
+                  <span className="ml-1 text-[15px] font-black text-blue-700 dark:text-blue-300">
+                    점
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    ["답변 수", `${selectedInterviewReport.answeredCount ?? 0}개`],
+                    ["질문 수", `${selectedInterviewReport.questionCount ?? 5}문항`],
+                    ["난이도", selectedInterviewReport.difficulty || "실전 압박"],
+                  ].map(([label, value]) => (
+                    <div
+                      key={label}
+                      className="rounded-[20px] border border-slate-200 bg-slate-100 p-4 dark:border-slate-700 dark:bg-slate-800"
+                    >
+                      <span className="mb-2 block text-[12px] font-black text-slate-500 dark:text-slate-400">
+                        {label}
+                      </span>
+                      <strong className="text-[18px] font-black text-slate-900 dark:text-white">
+                        {value}
+                      </strong>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mb-5 grid grid-cols-2 gap-4">
+                <div className="rounded-[22px] border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
+                  <h4 className="mb-3 text-[17px] font-black text-slate-900 dark:text-white">
+                    강점
+                  </h4>
+                  <ul className="space-y-2 text-[13px] font-extrabold leading-[1.65] text-slate-600 dark:text-slate-300">
+                    <li>· 질문 의도를 파악하고 답변을 구조화하려는 흐름이 좋습니다.</li>
+                    <li>· 기술 선택의 이유를 설명하려는 시도가 확인됩니다.</li>
+                    <li>· 기업 직무와 연결된 경험을 면접 답변으로 확장할 수 있습니다.</li>
+                  </ul>
+                </div>
+
+                <div className="rounded-[22px] border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
+                  <h4 className="mb-3 text-[17px] font-black text-slate-900 dark:text-white">
+                    보완점
+                  </h4>
+                  <ul className="space-y-2 text-[13px] font-extrabold leading-[1.65] text-slate-600 dark:text-slate-300">
+                    <li>· 성능 개선 수치와 비즈니스 효과를 더 구체화해야 합니다.</li>
+                    <li>· 꼬리질문에서는 결론을 먼저 말하는 방식이 더 안정적입니다.</li>
+                    <li>· 장애 상황, 우선순위 판단 기준을 사례 중심으로 보완하세요.</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSelectedInterviewReport(null)}
+                  className="rounded-full border border-slate-200 bg-white px-[18px] py-3 text-[14px] font-black text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                >
+                  닫기
+                </button>
+
+                <Link
+                  to={`/interview?company=${encodeURIComponent(
+                    selectedInterviewReport.company
+                  )}`}
+                  className="rounded-full bg-blue-600 px-[18px] py-3 text-[14px] font-black text-white"
+                >
+                  이 기업으로 다시 면접 보기
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
+
         {logoutOpen && (
-          <div
-            className="fixed inset-0 z-[2000] flex items-center justify-center bg-slate-900/45 p-6 backdrop-blur-md"
-            role="dialog"
-            aria-modal="true"
-          >
+          <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-slate-900/45 p-6 backdrop-blur-md">
             <div className="w-full max-w-[360px] rounded-[26px] border border-slate-200 bg-white p-[26px] shadow-[0_24px_70px_rgba(15,23,42,0.24)] dark:border-slate-700 dark:bg-slate-900">
               <h3 className="mb-3 text-[20px] font-black tracking-[-0.3px] text-slate-900 dark:text-white">
                 로그아웃
@@ -753,7 +1176,7 @@ export default function MyPage() {
         )}
 
         <div
-          className={`fixed bottom-7 right-7 z-[2100] rounded-full bg-slate-900 px-[18px] py-[13px] text-[14px] font-black text-white transition-all dark:bg-white dark:text-slate-900 ${
+          className={`fixed bottom-7 right-7 z-[2300] rounded-full bg-slate-900 px-[18px] py-[13px] text-[14px] font-black text-white transition-all dark:bg-white dark:text-slate-900 ${
             toast
               ? "translate-y-0 opacity-100"
               : "pointer-events-none translate-y-5 opacity-0"
