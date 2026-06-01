@@ -2,6 +2,13 @@ import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import AppLayout from "../components/AppLayout.jsx";
 import { isAuthenticated, clearAuthStorage } from "../utils/auth.js";
+import {
+  getCareerScores,
+  getNextAction,
+  getReadinessStatus,
+  getTechStacks,
+  readJson,
+} from "../utils/careerScore.js";
 
 const INTERVIEW_RESULT_KEY = "articlue_interview_results";
 const COVER_LETTER_KEY = "articlue_cover_letters";
@@ -24,12 +31,18 @@ function applyDocumentTheme(theme) {
   else document.documentElement.classList.remove("dark");
 }
 
+function clamp(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return 0;
+  return Math.min(100, Math.max(0, Math.round(number)));
+}
+
 function normalizeJobs(jobs) {
   return jobs.map((job, index) => ({
     id: job.id || job.company || `job-${index}`,
     company: job.company || job.name || "기업명 없음",
     role: job.role || job.position || "직무 정보 없음",
-    match: job.match || job.score || job.matchRate || "-",
+    match: `${clamp(job.match || job.score || job.matchRate || 80)}%`,
     desc:
       job.desc ||
       job.description ||
@@ -59,73 +72,34 @@ function readFavoriteJobs() {
 }
 
 function readInterviewResults() {
-  try {
-    const parsed = JSON.parse(
-      localStorage.getItem(INTERVIEW_RESULT_KEY) || "[]"
-    );
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+  const parsed = readJson(INTERVIEW_RESULT_KEY, []);
+  return Array.isArray(parsed) ? parsed : [];
 }
 
 function readCoverLetters() {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(COVER_LETTER_KEY) || "{}");
+  const parsed = readJson(COVER_LETTER_KEY, {});
 
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      return [];
-    }
-
-    return Object.entries(parsed).map(([companyId, content]) => {
-      const motivation =
-        content?.지원동기 || content?.motivation || "지원동기 내용이 없습니다.";
-      const project =
-        content?.프로젝트경험 ||
-        content?.project ||
-        "프로젝트 경험 내용이 없습니다.";
-
-      return {
-        id: companyId,
-        company: COMPANY_NAME_MAP[companyId] || companyId,
-        title: `[${COMPANY_NAME_MAP[companyId] || companyId}] 맞춤 자소서 초안`,
-        motivation,
-        project,
-        savedAt: content?.savedAt || null,
-      };
-    });
-  } catch {
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
     return [];
   }
-}
 
-function readTechStacks() {
-  try {
-    const parsed = JSON.parse(
-      localStorage.getItem("articlue-resume-techs") || "[]"
-    );
+  return Object.entries(parsed).map(([companyId, content]) => {
+    const motivation =
+      content?.지원동기 || content?.motivation || "지원동기 내용이 없습니다.";
+    const project =
+      content?.프로젝트경험 ||
+      content?.project ||
+      "프로젝트 경험 내용이 없습니다.";
 
-    if (Array.isArray(parsed) && parsed.length) {
-      return parsed
-        .map((tech) => {
-          if (typeof tech === "string") return tech;
-          return tech.name || tech.label || tech.value || "";
-        })
-        .filter(Boolean);
-    }
-  } catch {
-    // ignore
-  }
-
-  return [];
-}
-
-function readProgress() {
-  const raw = Number(localStorage.getItem("articlue_resume_progress"));
-  if (Number.isFinite(raw) && raw >= 0) {
-    return Math.min(100, Math.max(0, raw));
-  }
-  return 72;
+    return {
+      id: companyId,
+      company: COMPANY_NAME_MAP[companyId] || companyId,
+      title: `[${COMPANY_NAME_MAP[companyId] || companyId}] 맞춤 자소서 초안`,
+      motivation,
+      project,
+      savedAt: content?.savedAt || null,
+    };
+  });
 }
 
 function formatDate(value) {
@@ -151,6 +125,59 @@ function getTimestamp(value) {
   return Number.isNaN(time) ? 0 : time;
 }
 
+function getInsightText(scores) {
+  if (scores.resume < 40) {
+    return {
+      badge: "AI 추천 액션 · 집중 보완 필요",
+      title: "이력서 기본 정보와 프로젝트 경험 보완이 가장 우선입니다.",
+      description: `현재 프로필 완성도는 ${scores.resume}%입니다. 추천 정확도를 높이려면 기본 정보, 프로젝트 경험, 기술 스택을 먼저 채워야 합니다.`,
+      path: "/resume",
+      label: "이력서 보완하러 가기",
+    };
+  }
+
+  if (scores.coverLetter === 0) {
+    return {
+      badge: "AI 추천 액션 · 자소서 필요",
+      title: "추천 기업 기준 맞춤 자소서를 먼저 생성해보세요.",
+      description:
+        "저장된 맞춤 자소서가 없습니다. 관심 기업 기준으로 자소서 초안을 생성하면 지원 준비도가 올라갑니다.",
+      path: "/fitting",
+      label: "자소서 생성하기",
+    };
+  }
+
+  if (scores.interview > 0 && scores.interview < 80) {
+    return {
+      badge: "AI 추천 액션 · 면접 보완",
+      title: "면접 답변을 한 번 더 보완하면 좋습니다.",
+      description: `현재 면접 준비도는 ${scores.interview}%입니다. 꼬리질문 대응과 성과 설명을 다시 연습하는 것이 좋습니다.`,
+      path: "/interview",
+      label: "면접 재도전하기",
+    };
+  }
+
+  if (scores.tech < 40) {
+    return {
+      badge: "AI 추천 액션 · 기술스택 보완",
+      title: "기술 스택을 더 구체화하면 추천 정확도가 올라갑니다.",
+      description:
+        "사용 가능한 언어, 프레임워크, 데이터베이스, 협업 도구를 추가하면 직무 적합도 계산이 더 정밀해집니다.",
+      path: "/resume",
+      label: "기술스택 추가하기",
+    };
+  }
+
+  return {
+    badge: "AI 추천 액션 · 지원 준비 양호",
+    title: "추천 기업 기준으로 지원 준비를 이어가세요.",
+    description:
+      "이력서, 자소서, 면접 준비가 어느 정도 진행되었습니다. 관심 기업 기준으로 지원 전략을 이어가면 좋습니다.",
+    path: "/fitting",
+    label: "추천 기업 확인하기",
+  };
+}
+
 export default function MyPage() {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
@@ -159,26 +186,27 @@ export default function MyPage() {
   const [favorites, setFavorites] = useState([]);
   const [interviewResults, setInterviewResults] = useState([]);
   const [coverLetters, setCoverLetters] = useState([]);
+  const [careerScores, setCareerScores] = useState(() => getCareerScores());
+  const [nextAction, setNextAction] = useState(() => getNextAction());
+  const [techStacks, setTechStacks] = useState(() => getTechStacks());
   const [selectedInterviewReport, setSelectedInterviewReport] = useState(null);
   const [selectedCoverLetter, setSelectedCoverLetter] = useState(null);
   const [profileImage, setProfileImage] = useState("");
   const [toast, setToast] = useState("");
   const [activeTab, setActiveTab] = useState("resume");
-  const [progress, setProgress] = useState(() => readProgress());
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [theme, setTheme] = useState(
     () => localStorage.getItem("articlue-theme") || "light"
   );
 
+  const progress = careerScores.resume;
+  const matchScore = careerScores.overall;
+  const readinessStatus = getReadinessStatus(matchScore);
+  const insight = getInsightText(careerScores);
+
   const submitted =
     localStorage.getItem("articlue_resume_submitted") === "true";
-
-  const matchScore = submitted
-    ? Math.max(86, progress)
-    : Math.min(79, progress);
-
-  const techStacks = useMemo(() => readTechStacks(), []);
 
   const techSummary =
     techStacks.length > 0
@@ -213,36 +241,14 @@ export default function MyPage() {
   }, [interviewResults, coverLetters]);
 
   const nextActionItems = useMemo(() => {
-    const actions = [];
-
-    if (progress < 70) {
-      actions.push([
-        "이력서 완성도 먼저 높이기",
-        `현재 프로필 완성도는 ${progress}%입니다. 추천 정확도를 높이려면 이력서 보완이 우선입니다.`,
-        "/resume",
-        "보완하기",
-      ]);
-    }
-
-    if (coverLetters.length === 0) {
-      actions.push([
-        "맞춤 자소서 먼저 생성하기",
-        "아직 저장된 맞춤 자소서가 없습니다. 추천 기업 기준으로 자소서 초안을 먼저 생성해보세요.",
-        firstFavorite
-          ? `/fitting?company=${encodeURIComponent(firstFavorite.company)}`
-          : "/fitting",
-        "생성하기",
-      ]);
-    }
-
-    if (latestInterview && Number(latestInterview.score) < 80) {
-      actions.push([
-        `${latestInterview.company} 면접 재도전`,
-        `최근 면접 점수는 ${latestInterview.score}점입니다. 꼬리질문 대응을 다시 훈련하는 것이 좋습니다.`,
-        `/interview?company=${encodeURIComponent(latestInterview.company)}`,
-        "재도전",
-      ]);
-    }
+    const actions = [
+      [
+        nextAction.title,
+        nextAction.description,
+        nextAction.path,
+        nextAction.label,
+      ],
+    ];
 
     if (firstFavorite) {
       actions.push([
@@ -261,7 +267,7 @@ export default function MyPage() {
     ]);
 
     return actions.slice(0, 3);
-  }, [progress, coverLetters.length, latestInterview, firstFavorite]);
+  }, [nextAction, firstFavorite]);
 
   const currentUser = (() => {
     try {
@@ -281,7 +287,9 @@ export default function MyPage() {
     setInterviewResults(readInterviewResults());
     setCoverLetters(readCoverLetters());
     setProfileImage(localStorage.getItem("articlue_profile_image") || "");
-    setProgress(readProgress());
+    setCareerScores(getCareerScores());
+    setNextAction(getNextAction());
+    setTechStacks(getTechStacks());
   };
 
   useEffect(() => {
@@ -310,7 +318,8 @@ export default function MyPage() {
         event.key === "articlue_profile_image" ||
         event.key === "articlue_profile_name" ||
         event.key === INTERVIEW_RESULT_KEY ||
-        event.key === COVER_LETTER_KEY
+        event.key === COVER_LETTER_KEY ||
+        event.key === "articlue-resume-techs"
       ) {
         refreshPageData();
       }
@@ -521,6 +530,12 @@ export default function MyPage() {
                 </div>
               ))}
             </div>
+
+            <p className="mt-3 text-[12px] font-extrabold leading-[1.6] opacity-90">
+              이력서 {careerScores.resume}%, 자소서 {careerScores.coverLetter}%,
+              면접 {careerScores.interview}%, 기술 {careerScores.tech}% 기준 ·{" "}
+              {readinessStatus}
+            </p>
           </div>
 
           <div className="absolute -right-[110px] -top-[130px] h-[300px] w-[300px] rounded-full bg-white/15" />
@@ -677,8 +692,8 @@ export default function MyPage() {
 
             <div className="mt-5 grid grid-cols-2 gap-3">
               {[
-                ["포트폴리오 완성도", `${progress}%`, progress],
-                ["최근 AI 분석 상태", submitted ? "분석 완료" : "보완 권장", 64],
+                ["포트폴리오 완성도", `${careerScores.resume}%`, careerScores.resume],
+                ["추천 적합도 평균", `${careerScores.overall}%`, careerScores.overall],
                 [
                   "최근 면접 결과",
                   latestInterview ? `${latestInterview.score}점` : "기록 없음",
@@ -710,19 +725,40 @@ export default function MyPage() {
           </div>
 
           <aside className="rounded-[26px] border border-blue-100 bg-gradient-to-b from-blue-50 to-white p-6 shadow-[0_10px_30px_rgba(15,23,42,0.07)] dark:border-slate-700 dark:from-slate-900 dark:to-slate-800">
+            <div className="mb-4 inline-flex rounded-full bg-blue-100 px-3 py-2 text-[12px] font-black text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+              {insight.badge}
+            </div>
             <h2 className="mb-[10px] text-[22px] font-black text-slate-900 dark:text-white">
-              기술 구현 설명은 충분하지만, 비즈니스 성과 연결이 부족합니다.
+              {insight.title}
             </h2>
             <p className="mb-[17px] break-keep text-[14px] leading-[1.75] text-slate-600 dark:text-slate-300">
-              Redis 캐싱, API 최적화 경험은 강점입니다. 다만 채용 공고
-              기준으로는 트래픽 개선 수치, 비용 절감, 사용자 경험 개선처럼 기업
-              관점의 성과 표현을 보완하면 추천 적합도가 더 올라갑니다.
+              {insight.description}
             </p>
+            <div className="mb-4 grid grid-cols-2 gap-2">
+              {[
+                ["이력서", `${careerScores.resume}%`],
+                ["자소서", `${careerScores.coverLetter}%`],
+                ["면접", `${careerScores.interview}%`],
+                ["기술 적합도", `${careerScores.tech}%`],
+              ].map(([label, value]) => (
+                <div
+                  key={label}
+                  className="rounded-2xl border border-blue-100 bg-white p-3 dark:border-slate-700 dark:bg-slate-900"
+                >
+                  <span className="mb-1 block text-[12px] font-black text-slate-500 dark:text-slate-400">
+                    {label}
+                  </span>
+                  <strong className="text-[18px] font-black text-slate-900 dark:text-white">
+                    {value}
+                  </strong>
+                </div>
+              ))}
+            </div>
             <Link
-              to="/growth"
+              to={insight.path}
               className="inline-flex rounded-full bg-blue-600 px-[17px] py-[11px] text-[14px] font-black text-white"
             >
-              부족한 역량 보완하러 가기
+              {insight.label}
             </Link>
           </aside>
         </section>
@@ -835,8 +871,8 @@ export default function MyPage() {
             ))}
           </div>
 
-          {activeTab === "resume" && (
-            coverLetters.length > 0 ? (
+          {activeTab === "resume" &&
+            (coverLetters.length > 0 ? (
               <div className="grid gap-3">
                 {coverLetters.map((letter) => (
                   <article
@@ -887,11 +923,10 @@ export default function MyPage() {
                 <br />
                 커리어 피팅에서 맞춤 자소서를 생성해보세요.
               </div>
-            )
-          )}
+            ))}
 
-          {activeTab === "interview" && (
-            interviewResults.length > 0 ? (
+          {activeTab === "interview" &&
+            (interviewResults.length > 0 ? (
               <div className="grid grid-cols-1 gap-3">
                 {interviewResults.map((result) => (
                   <article
@@ -963,18 +998,19 @@ export default function MyPage() {
                 <br />
                 면접을 완료하면 이곳에 자동으로 저장됩니다.
               </div>
-            )
-          )}
+            ))}
 
           {activeTab === "growth" && (
             <div className="grid gap-3">
               <article className="flex items-center justify-between gap-4 rounded-[20px] border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
                 <div>
                   <div className="mb-1 font-black text-slate-900 dark:text-white">
-                    📈 포트폴리오 약점 진단 리포트
+                    📈 통합 준비도 진단 리포트
                   </div>
                   <div className="text-[13px] font-extrabold text-slate-600 dark:text-slate-300">
-                    Redis 성과 표현 보완 권장 · 인프라 경험 보완 필요
+                    이력서 {careerScores.resume}% · 자소서{" "}
+                    {careerScores.coverLetter}% · 면접 {careerScores.interview}% ·
+                    기술 {careerScores.tech}% · 종합 {careerScores.overall}%
                   </div>
                 </div>
                 <Link
@@ -1026,25 +1062,6 @@ export default function MyPage() {
                 <p className="break-keep text-[14px] font-extrabold leading-[1.75] text-slate-600 dark:text-slate-300">
                   {selectedCoverLetter.project}
                 </p>
-              </div>
-
-              <div className="mt-6 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setSelectedCoverLetter(null)}
-                  className="rounded-full border border-slate-200 bg-white px-[18px] py-3 text-[14px] font-black text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                >
-                  닫기
-                </button>
-
-                <Link
-                  to={`/fitting?company=${encodeURIComponent(
-                    selectedCoverLetter.company
-                  )}`}
-                  className="rounded-full bg-blue-600 px-[18px] py-3 text-[14px] font-black text-white"
-                >
-                  이 기업 준비 이어가기
-                </Link>
               </div>
             </div>
           </div>
@@ -1108,49 +1125,6 @@ export default function MyPage() {
                     </div>
                   ))}
                 </div>
-              </div>
-
-              <div className="mb-5 grid grid-cols-2 gap-4">
-                <div className="rounded-[22px] border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
-                  <h4 className="mb-3 text-[17px] font-black text-slate-900 dark:text-white">
-                    강점
-                  </h4>
-                  <ul className="space-y-2 text-[13px] font-extrabold leading-[1.65] text-slate-600 dark:text-slate-300">
-                    <li>· 질문 의도를 파악하고 답변을 구조화하려는 흐름이 좋습니다.</li>
-                    <li>· 기술 선택의 이유를 설명하려는 시도가 확인됩니다.</li>
-                    <li>· 기업 직무와 연결된 경험을 면접 답변으로 확장할 수 있습니다.</li>
-                  </ul>
-                </div>
-
-                <div className="rounded-[22px] border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
-                  <h4 className="mb-3 text-[17px] font-black text-slate-900 dark:text-white">
-                    보완점
-                  </h4>
-                  <ul className="space-y-2 text-[13px] font-extrabold leading-[1.65] text-slate-600 dark:text-slate-300">
-                    <li>· 성능 개선 수치와 비즈니스 효과를 더 구체화해야 합니다.</li>
-                    <li>· 꼬리질문에서는 결론을 먼저 말하는 방식이 더 안정적입니다.</li>
-                    <li>· 장애 상황, 우선순위 판단 기준을 사례 중심으로 보완하세요.</li>
-                  </ul>
-                </div>
-              </div>
-
-              <div className="mt-6 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setSelectedInterviewReport(null)}
-                  className="rounded-full border border-slate-200 bg-white px-[18px] py-3 text-[14px] font-black text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                >
-                  닫기
-                </button>
-
-                <Link
-                  to={`/interview?company=${encodeURIComponent(
-                    selectedInterviewReport.company
-                  )}`}
-                  className="rounded-full bg-blue-600 px-[18px] py-3 text-[14px] font-black text-white"
-                >
-                  이 기업으로 다시 면접 보기
-                </Link>
               </div>
             </div>
           </div>

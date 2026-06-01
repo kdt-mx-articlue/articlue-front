@@ -186,6 +186,32 @@ const initialGithub = {
   connected: false,
 };
 
+const PROGRESS_WEIGHTS = {
+  basic: 20,
+  techStack: 20,
+  education: 15,
+  experience: 15,
+  essay: 15,
+  portfolio: 10,
+  github: 5,
+};
+
+function hasText(value) {
+  return String(value || "").trim().length > 0;
+}
+
+function getSectionRatio(values) {
+  if (!values.length) return 0;
+
+  const completed = values.filter((value) => {
+    if (Array.isArray(value)) return value.length > 0;
+    if (typeof value === "boolean") return value;
+    return hasText(value);
+  }).length;
+
+  return completed / values.length;
+}
+
 function readJson(key, fallback) {
   try {
     const saved = localStorage.getItem(key);
@@ -459,7 +485,7 @@ export default function Resume() {
   const [missingItems, setMissingItems] = useState([]);
 
   const progress = useMemo(() => {
-    const baseFields = [
+    const basicRatio = getSectionRatio([
       form.title,
       form.name,
       form.phone,
@@ -469,6 +495,11 @@ export default function Resume() {
       form.gender,
       form.military,
       form.preferredArea,
+    ]);
+
+    const techStackRatio = techStacks.length > 0 ? 1 : 0;
+
+    const educationValues = [
       form.highSchool,
       form.university,
       form.major,
@@ -476,51 +507,51 @@ export default function Resume() {
       form.gradeScale,
     ];
 
-    const graduateFields = form.hasGraduate
-      ? [form.graduateSchool, form.graduateMajor]
-      : [];
+    if (form.hasGraduate) {
+      educationValues.push(form.graduateSchool, form.graduateMajor);
+    }
 
-    const experienceFields = experiences.flatMap((item) => [
-      item.title,
-      item.startDate,
-      item.isOngoing ? "진행 중" : item.endDate,
+    const educationRatio = getSectionRatio(educationValues);
+
+    const hasProjectExperience = experiences.some(
+      (item) =>
+        hasText(item.title) &&
+        hasText(item.startDate) &&
+        (item.isOngoing || hasText(item.endDate))
+    );
+
+    const hasCertificate = certificates.some((item) => hasText(item.name));
+
+    const hasCareerResult = careers.some(
+      (item) => hasText(item.company) || hasText(item.result)
+    );
+
+    const experienceRatio = getSectionRatio([
+      hasProjectExperience,
+      hasCertificate,
+      hasCareerResult,
     ]);
 
-    const essayFields = essays.flatMap((item) => [item.title, item.body]);
+    const essayRatio = essays.some(
+      (item) => hasText(item.title) && hasText(item.body)
+    )
+      ? 1
+      : 0;
 
-    const certificateFields = certificates.flatMap((item) => [
-      item.type,
-      item.name,
-      item.date,
-      item.organization,
-    ]);
+    const portfolioRatio = files.length > 0 ? 1 : 0;
 
-    const careerFields = careers.flatMap((item) => [
-      item.company,
-      item.department,
-      item.position,
-      item.startDate,
-      item.isWorking ? "재직 중" : item.endDate,
-      item.result,
-    ]);
+    const githubRatio = github.connected ? 1 : 0;
 
-    const allFields = [
-      ...baseFields,
-      ...graduateFields,
-      techStacks.length > 0 ? "techStacks" : "",
-      ...experienceFields,
-      ...essayFields,
-      ...certificateFields,
-      ...careerFields,
-      files.length > 0 ? "portfolio" : "",
-      github.connected ? "github" : "",
-    ];
+    const weightedScore =
+      basicRatio * PROGRESS_WEIGHTS.basic +
+      techStackRatio * PROGRESS_WEIGHTS.techStack +
+      educationRatio * PROGRESS_WEIGHTS.education +
+      experienceRatio * PROGRESS_WEIGHTS.experience +
+      essayRatio * PROGRESS_WEIGHTS.essay +
+      portfolioRatio * PROGRESS_WEIGHTS.portfolio +
+      githubRatio * PROGRESS_WEIGHTS.github;
 
-    const completed = allFields.filter((value) =>
-      String(value || "").trim()
-    ).length;
-
-    return Math.round((completed / allFields.length) * 100);
+    return Math.min(100, Math.round(weightedScore));
   }, [
     form,
     techStacks,

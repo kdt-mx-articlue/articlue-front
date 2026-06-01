@@ -1,32 +1,159 @@
 import { Link } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AppLayout from "../components/AppLayout.jsx";
+import {
+  getCareerScores,
+  getNextAction,
+  getReadinessStatus,
+  getTechStacks,
+  readJson,
+} from "../utils/careerScore.js";
+
+const FAVORITE_KEY = "articlue_favorite_jobs";
+const INTERVIEW_RESULT_KEY = "articlue_interview_results";
+
+const fallbackCompanies = [
+  ["NW", "네이버웹툰 · Backend", "Redis · 대용량 트래픽 · API 설계", "92%"],
+  ["TS", "토스 · Server", "결제 안정성 · 데이터 처리 · 성능 개선", "88%"],
+  ["KK", "카카오 · Platform", "분산 시스템 · 백엔드 운영 · 모니터링", "84%"],
+];
+
+function clamp(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return 0;
+  return Math.min(100, Math.max(0, Math.round(number)));
+}
+
+function readFavoriteJobs() {
+  const data = readJson(FAVORITE_KEY, []);
+  if (!Array.isArray(data)) return [];
+
+  return data.map((job, index) => ({
+    logo: String(job.company || job.name || "기업").slice(0, 2).toUpperCase(),
+    title: `${job.company || job.name || "기업명 없음"} · ${
+      job.role || job.position || "직무 정보 없음"
+    }`,
+    desc:
+      job.desc ||
+      job.description ||
+      (Array.isArray(job.stacks) ? job.stacks.join(" · ") : "관심 기업 공고"),
+    score: `${clamp(job.match || job.score || job.matchRate || 80)}%`,
+    path: `/fitting?company=${encodeURIComponent(
+      job.company || job.name || ""
+    )}`,
+  }));
+}
+
+function getLatestInterviewSummary() {
+  const results = readJson(INTERVIEW_RESULT_KEY, []);
+  if (!Array.isArray(results) || results.length === 0) {
+    return {
+      value: "기록 없음",
+      desc: "면접을 완료하면 최근 면접 준비 기록이 표시됩니다.",
+    };
+  }
+
+  const latest = [...results].sort((a, b) => {
+    const aTime = new Date(a.createdAt || 0).getTime();
+    const bTime = new Date(b.createdAt || 0).getTime();
+    return bTime - aTime;
+  })[0];
+
+  return {
+    value: latest.company || "최근 면접",
+    desc: `${latest.role || "면접"} · 종합 ${latest.score ?? 0}점`,
+  };
+}
 
 export default function Home() {
-  const [progress, setProgress] = useState(68);
   const [favoriteCount, setFavoriteCount] = useState(0);
   const [showBanner, setShowBanner] = useState(false);
+  const [careerScores, setCareerScores] = useState(() => getCareerScores());
+  const [nextAction, setNextAction] = useState(() => getNextAction());
+  const [favoriteCompanies, setFavoriteCompanies] = useState(() =>
+    readFavoriteJobs()
+  );
+  const [latestInterview, setLatestInterview] = useState(() =>
+    getLatestInterviewSummary()
+  );
+  const [techStacks, setTechStacks] = useState(() => getTechStacks());
 
-  useEffect(() => {
-    const savedProgress = Number(localStorage.getItem("articlue_resume_progress"));
+  const progress = careerScores.resume;
+  const overall = careerScores.overall;
+  const readinessStatus = getReadinessStatus(overall);
 
-    const nextProgress =
-      Number.isFinite(savedProgress) && savedProgress >= 0
-        ? Math.min(100, Math.max(0, savedProgress))
-        : 68;
+  const companyList = useMemo(() => {
+    if (favoriteCompanies.length > 0) {
+      return favoriteCompanies.slice(0, 3);
+    }
 
-    setProgress(nextProgress);
+    return fallbackCompanies.map(([logo, title, desc, score]) => ({
+      logo,
+      title,
+      desc,
+      score,
+      path: "/fitting",
+    }));
+  }, [favoriteCompanies]);
 
-    const favorites = JSON.parse(
-      localStorage.getItem("articlue_favorite_jobs") || "[]"
-    );
+  const profileStatusCards = useMemo(() => {
+    return [
+      [
+        "기본 정보",
+        progress >= 70 ? "완료" : progress >= 30 ? "진행 중" : "보완 필요",
+      ],
+      [
+        "자소서",
+        careerScores.coverLetter > 0
+          ? `${careerScores.coverLetter}%`
+          : "생성 필요",
+      ],
+      [
+        "기술 스택",
+        careerScores.tech >= 40
+          ? "양호"
+          : careerScores.tech > 0
+          ? "진행 중"
+          : "미입력",
+      ],
+    ];
+  }, [progress, careerScores.coverLetter, careerScores.tech]);
 
+  const refreshHomeData = () => {
+    const nextScores = getCareerScores();
+    const favorites = readFavoriteJobs();
+
+    setCareerScores(nextScores);
+    setNextAction(getNextAction());
+    setFavoriteCompanies(favorites);
     setFavoriteCount(favorites.length);
+    setLatestInterview(getLatestInterviewSummary());
+    setTechStacks(getTechStacks());
 
     const submitted =
       localStorage.getItem("articlue_resume_submitted") === "true";
 
     setShowBanner(!submitted);
+  };
+
+  useEffect(() => {
+    refreshHomeData();
+
+    const handleFocus = () => {
+      refreshHomeData();
+    };
+
+    const handleStorage = () => {
+      refreshHomeData();
+    };
+
+    window.addEventListener("focus", handleFocus);
+    window.addEventListener("storage", handleStorage);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("storage", handleStorage);
+    };
   }, []);
 
   const hideImproveBanner = () => {
@@ -119,23 +246,24 @@ export default function Home() {
 
           <div className="mb-[10px]">
             <strong className="block text-[44px] font-black leading-none tracking-[-1px]">
-              {progress}%
+              {overall}%
             </strong>
             <span className="mt-[7px] block whitespace-nowrap text-[13px] font-extrabold opacity-85">
-              이력서 기반
+              {readinessStatus}
             </span>
           </div>
 
           <div className="mb-[14px] h-[10px] overflow-hidden rounded-full bg-white/20">
             <div
               className="h-full rounded-full bg-gradient-to-r from-white to-green-200"
-              style={{ width: `${progress}%` }}
+              style={{ width: `${overall}%` }}
             />
           </div>
 
           <p className="text-[13px] font-medium leading-[1.72] opacity-90">
-            프로젝트 성과와 사용 기술을 더 구체화하면 추천 기업과 면접 질문의
-            정확도가 함께 올라갑니다.
+            이력서 {careerScores.resume}%, 자소서 {careerScores.coverLetter}%,
+            면접 {careerScores.interview}%, 기술 {careerScores.tech}% 기준으로
+            계산된 준비도입니다.
           </p>
         </div>
 
@@ -149,38 +277,34 @@ export default function Home() {
               추천 정확도
             </h3>
             <p className="text-[14px] font-bold leading-[1.6] text-slate-600 dark:text-slate-300">
-              이력서를 조금 더 작성하면 기업 추천 품질이 올라갑니다.
+              이력서, 자소서, 면접, 기술스택을 함께 반영한 현재 준비도입니다.
             </p>
           </div>
 
           <div
             className="relative flex h-[156px] w-[156px] items-center justify-center rounded-full"
             style={{
-              background: `conic-gradient(#2563eb 0 ${progress}%, #f1f5f9 ${progress}% 100%)`,
+              background: `conic-gradient(#2563eb 0 ${overall}%, #f1f5f9 ${overall}% 100%)`,
             }}
           >
             <div className="absolute h-[116px] w-[116px] rounded-full bg-white dark:bg-slate-900" />
             <div className="relative z-10 text-center">
               <strong className="block text-[34px] font-black text-blue-700 dark:text-blue-300">
-                {progress}%
+                {overall}%
               </strong>
               <span className="text-[12px] font-black text-slate-400">
-                프로필 완성도
+                종합 준비도
               </span>
             </div>
           </div>
 
           <div className="flex w-full items-center justify-center gap-2 rounded-[18px] bg-blue-50 px-[14px] py-[13px] text-[13px] font-black text-blue-800 dark:bg-blue-950 dark:text-blue-300">
             <span className="h-2 w-2 rounded-full bg-blue-600" />
-            프로젝트 성과를 추가하면 더 정밀해져요
+            {nextAction.title}
           </div>
 
           <div className="grid w-full grid-cols-3 gap-2">
-            {[
-              ["기본 정보", "완료"],
-              ["프로젝트", "보완 필요"],
-              ["기술 스택", "양호"],
-            ].map(([label, value]) => (
+            {profileStatusCards.map(([label, value]) => (
               <div
                 key={label}
                 className="flex min-h-[72px] flex-col items-center justify-center gap-[5px] rounded-2xl bg-slate-100 px-2 py-3 dark:bg-slate-800"
@@ -216,47 +340,45 @@ export default function Home() {
           </div>
 
           <div className="flex flex-col gap-3">
-            {[
-              ["NW", "네이버웹툰 · Backend", "Redis · 대용량 트래픽 · API 설계", "92%"],
-              ["TS", "토스 · Server", "결제 안정성 · 데이터 처리 · 성능 개선", "88%"],
-              ["KK", "카카오 · Platform", "분산 시스템 · 백엔드 운영 · 모니터링", "84%"],
-            ].map(([logo, title, desc, score]) => (
+            {companyList.map((company) => (
               <Link
-                key={title}
-                to="/fitting"
+                key={company.title}
+                to={company.path}
                 className="flex items-center gap-[14px] rounded-[20px] border border-slate-200 bg-white p-[15px] transition hover:-translate-y-0.5 hover:border-blue-100 hover:shadow-[0_10px_30px_rgba(15,23,42,0.07)] dark:border-slate-700 dark:bg-slate-800 dark:hover:border-blue-800"
               >
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[17px] bg-blue-50 font-black text-blue-700 dark:bg-blue-950 dark:text-blue-300">
-                  {logo}
+                  {company.logo}
                 </div>
 
                 <div className="min-w-0 flex-1">
                   <strong className="mb-1 block text-[15px] font-black text-slate-900 dark:text-white">
-                    {title}
+                    {company.title}
                   </strong>
                   <span className="block truncate text-[12px] font-extrabold text-slate-600 dark:text-slate-300">
-                    {desc}
+                    {company.desc}
                   </span>
                 </div>
 
                 <div className="font-mono text-[20px] font-black text-emerald-600 dark:text-emerald-400">
-                  {score}
+                  {company.score}
                 </div>
               </Link>
             ))}
           </div>
 
           <div className="mt-[10px] flex flex-wrap gap-[7px]">
-            {["추천 근거 4개 일치", "자소서 생성 가능", "면접 대비 가능"].map(
-              (chip) => (
-                <span
-                  key={chip}
-                  className="rounded-full bg-blue-50 px-[10px] py-[6px] text-[12px] font-black text-blue-800 dark:bg-blue-950 dark:text-blue-300"
-                >
-                  {chip}
-                </span>
-              )
-            )}
+            {[
+              `${techStacks.length}개 기술스택 반영`,
+              `${careerScores.coverLetter}% 자소서 준비도`,
+              `${careerScores.interview}% 면접 준비도`,
+            ].map((chip) => (
+              <span
+                key={chip}
+                className="rounded-full bg-blue-50 px-[10px] py-[6px] text-[12px] font-black text-blue-800 dark:bg-blue-950 dark:text-blue-300"
+              >
+                {chip}
+              </span>
+            ))}
           </div>
         </article>
       </section>
@@ -293,9 +415,21 @@ export default function Home() {
 
       <section className="mt-[22px] grid grid-cols-3 gap-[18px]">
         {[
-          ["찜한 기업 공고", `${favoriteCount}개`, "관심 기업은 내 커리어 관리에서 다시 확인할 수 있습니다."],
-          ["최근 면접 준비", "Backend", "네이버웹툰 실무진 면접 기준 질문이 준비되어 있습니다."],
-          ["다음 추천 액션", "프로젝트 성과 보완", "숫자 기반 성과를 추가하면 매칭률이 더 명확해집니다."],
+          [
+            "찜한 기업 공고",
+            `${favoriteCount}개`,
+            "관심 기업은 내 커리어 관리에서 다시 확인할 수 있습니다.",
+          ],
+          [
+            "최근 면접 준비",
+            latestInterview.value,
+            latestInterview.desc,
+          ],
+          [
+            "다음 추천 액션",
+            nextAction.label,
+            nextAction.description,
+          ],
         ].map(([label, value, desc]) => (
           <article
             key={label}
@@ -307,7 +441,7 @@ export default function Home() {
             <strong className="text-[25px] font-black text-slate-900 dark:text-white">
               {value}
             </strong>
-            <p className="mt-2 text-[12px] font-bold leading-[1.55] text-slate-400 dark:text-slate-500">
+            <p className="mt-2 line-clamp-2 text-[12px] font-bold leading-[1.55] text-slate-400 dark:text-slate-500">
               {desc}
             </p>
           </article>
