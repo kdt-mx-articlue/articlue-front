@@ -214,6 +214,97 @@ function buildDynamicCompanies() {
     }));
 }
 
+
+function getScoreLevel(score) {
+  if (score >= 80) return "양호";
+  if (score >= 60) return "보완 권장";
+  if (score >= 40) return "집중 보완";
+  return "우선 보완";
+}
+
+function getLowestScoreItem(careerScores) {
+  const items = [
+    {
+      key: "resume",
+      label: "이력서 완성도",
+      score: careerScores.resume,
+      title: "이력서 기본 정보와 프로젝트 경험 보완이 가장 우선입니다.",
+      description:
+        "프로필 기본 정보, 프로젝트 경험, 기술 스택을 더 채우면 추천 기업 적합도와 성장 진단 정확도가 함께 올라갑니다.",
+      path: "/resume",
+      buttonLabel: "이력서 보완하기",
+    },
+    {
+      key: "coverLetter",
+      label: "자소서 준비도",
+      score: careerScores.coverLetter,
+      title: "추천 기업 기준 맞춤 자소서를 먼저 준비하면 좋습니다.",
+      description:
+        "관심 기업별 지원 동기와 프로젝트 경험을 정리하면 실제 지원 단계로 넘어가기 쉬워집니다.",
+      path: "/fitting",
+      buttonLabel: "자소서 생성하기",
+    },
+    {
+      key: "interview",
+      label: "면접 준비도",
+      score: careerScores.interview,
+      title: "면접 답변 근거와 성과 설명을 보완해야 합니다.",
+      description:
+        "기술 선택 이유, 문제 해결 과정, 결과 수치를 말로 설명하는 연습을 추가하면 면접 준비도가 올라갑니다.",
+      path: "/interview",
+      buttonLabel: "면접 연습하기",
+    },
+    {
+      key: "tech",
+      label: "기술스택 적합도",
+      score: careerScores.tech,
+      title: "기술스택을 더 구체적으로 입력해야 추천 정확도가 올라갑니다.",
+      description:
+        "언어, 프레임워크, 데이터베이스, 협업 도구를 추가하면 기업별 직무 적합도 계산이 더 정밀해집니다.",
+      path: "/resume",
+      buttonLabel: "기술스택 추가하기",
+    },
+  ];
+
+  return items.sort((a, b) => a.score - b.score)[0];
+}
+
+function getPrimaryAction(careerScores) {
+  if (careerScores.resume < 60) {
+    return {
+      label: "이력서 보완",
+      title: "지원 준비의 기준 데이터부터 채워야 합니다.",
+      description: "기본 정보와 프로젝트 경험을 채우면 모든 화면의 준비도 계산이 안정화됩니다.",
+      path: "/resume",
+    };
+  }
+
+  if (careerScores.coverLetter < 60) {
+    return {
+      label: "자소서 생성",
+      title: "추천 기업 기준 맞춤 자소서를 생성하세요.",
+      description: "기업별 지원 동기와 프로젝트 경험을 정리하면 다음 단계로 넘어가기 쉽습니다.",
+      path: "/fitting",
+    };
+  }
+
+  if (careerScores.interview < 60) {
+    return {
+      label: "면접 연습",
+      title: "자소서 이후에는 면접 답변 완성도가 중요합니다.",
+      description: "질문별 답변 근거와 성과 설명을 연습해 면접 준비도를 끌어올리세요.",
+      path: "/interview",
+    };
+  }
+
+  return {
+    label: "추천 기업 확인",
+    title: "이제 관심 기업 기준으로 지원 전략을 이어가세요.",
+    description: "추천 기업을 비교하고 자소서·면접 준비를 기업별로 연결하면 좋습니다.",
+    path: "/fitting",
+  };
+}
+
 export default function Growth() {
   const [toast, setToast] = useState("");
   const [selectedCompany, setSelectedCompany] = useState(null);
@@ -230,10 +321,62 @@ export default function Growth() {
     fullMark: 100,
   }));
 
-  const summaryCards = [
-    ["포트폴리오 완성도", `${careerScores.resume}%`, getReadinessStatus(careerScores.resume)],
-    ["지원 준비도 평균", `${careerScores.overall}%`, readinessStatus],
-    ["우선 보완 역량", careerScores.resume < 40 ? "이력서" : careerScores.tech < 40 ? "기술스택" : "면접·성과", "보완 필요"],
+  const dashboardCards = [
+    {
+      label: "이력서 완성도",
+      value: careerScores.resume,
+      description: "기본 정보, 프로젝트 경험, 기술스택 입력 상태",
+      path: "/resume",
+      buttonLabel: "보완하기",
+    },
+    {
+      label: "자소서 준비도",
+      value: careerScores.coverLetter,
+      description: "추천 기업 기준 맞춤 자소서 저장 상태",
+      path: "/fitting",
+      buttonLabel: "생성하기",
+    },
+    {
+      label: "면접 준비도",
+      value: careerScores.interview,
+      description: "AI 면접 리포트와 답변 완성도 기준",
+      path: "/interview",
+      buttonLabel: "연습하기",
+    },
+    {
+      label: "기술스택 적합도",
+      value: careerScores.tech,
+      description: "입력된 기술스택과 추천 직무 요구 역량 일치도",
+      path: "/resume",
+      buttonLabel: "추가하기",
+    },
+  ];
+
+  const lowestScoreItem = getLowestScoreItem(careerScores);
+  const primaryAction = getPrimaryAction(careerScores);
+
+  const actionCards = [
+    primaryAction,
+    {
+      label: "성장 리포트 확인",
+      title: "점수별 약점과 보완 방향을 다시 점검하세요.",
+      description: "현재 화면에서 부족한 영역, 추천 기업, 차트 분석을 함께 확인할 수 있습니다.",
+      path: "/growth",
+    },
+    {
+      label: "기업 추천 확인",
+      title: "내 준비도와 맞는 기업을 비교하세요.",
+      description: "찜한 기업, 자소서, 면접 기록, 기술스택을 반영한 추천 우선순위를 확인하세요.",
+      path: "/fitting",
+    },
+  ];
+
+  const supportFlow = [
+    ["01", "프로필 작성", "기본 정보와 기술스택 입력"],
+    ["02", "기업 추천", "적합도 높은 기업 확인"],
+    ["03", "자소서 생성", "기업별 지원 문서 준비"],
+    ["04", "면접 연습", "답변 근거와 성과 설명 보완"],
+    ["05", "최종 점검", "성장 리포트로 약점 확인"],
   ];
 
   const showToast = (message) => {
@@ -301,6 +444,157 @@ export default function Growth() {
         </div>
 
         <div className="absolute -right-20 -top-24 h-[280px] w-[280px] rounded-full bg-white/15" />
+      </section>
+
+      <section className="mb-[22px] grid grid-cols-4 gap-4">
+        {dashboardCards.map((card) => (
+          <article
+            key={card.label}
+            className="rounded-[26px] border border-slate-200 bg-white p-[22px] shadow-[0_10px_30px_rgba(15,23,42,0.07)] transition hover:-translate-y-0.5 hover:shadow-[0_18px_40px_rgba(15,23,42,0.10)] dark:border-slate-700 dark:bg-slate-900"
+          >
+            <div className="mb-[13px] flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-[15px] font-black text-slate-900 dark:text-white">
+                  {card.label}
+                </h3>
+                <p className="mt-2 break-keep text-[12px] font-bold leading-[1.55] text-slate-500 dark:text-slate-400">
+                  {card.description}
+                </p>
+              </div>
+
+              <span className="shrink-0 rounded-full bg-blue-50 px-[10px] py-[7px] text-[12px] font-black text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                {getScoreLevel(card.value)}
+              </span>
+            </div>
+
+            <div className="mb-[12px] flex items-end justify-between gap-3">
+              <strong className="text-[34px] font-black leading-none tracking-[-1px] text-slate-900 dark:text-white">
+                {card.value}%
+              </strong>
+              <Link
+                to={card.path}
+                className="rounded-full border border-blue-600 px-[12px] py-[8px] text-[12px] font-black text-blue-700 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-950"
+              >
+                {card.buttonLabel}
+              </Link>
+            </div>
+
+            <div className="h-[9px] overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-blue-600 to-emerald-500"
+                style={{ width: `${card.value}%` }}
+              />
+            </div>
+          </article>
+        ))}
+      </section>
+
+      <section className="mb-[22px] grid grid-cols-[1.05fr_.95fr] gap-5">
+        <article className="rounded-[28px] border border-amber-100 bg-amber-50 p-[26px] shadow-[0_10px_30px_rgba(15,23,42,0.07)] dark:border-amber-900 dark:bg-amber-950/30">
+          <div className="mb-4 inline-flex rounded-full bg-white px-[12px] py-[8px] text-[12px] font-black text-amber-700 dark:bg-slate-900 dark:text-amber-300">
+            우선 보완 영역
+          </div>
+
+          <h3 className="mb-2 text-[24px] font-black tracking-[-0.6px] text-slate-900 dark:text-white">
+            {lowestScoreItem.label}
+          </h3>
+
+          <div className="mb-4 flex items-end gap-2">
+            <strong className="text-[46px] font-black leading-none tracking-[-1.2px] text-amber-700 dark:text-amber-300">
+              {lowestScoreItem.score}%
+            </strong>
+            <span className="pb-1 text-[13px] font-black text-slate-500 dark:text-slate-400">
+              현재 가장 낮은 항목
+            </span>
+          </div>
+
+          <h4 className="mb-2 break-keep text-[18px] font-black text-slate-900 dark:text-white">
+            {lowestScoreItem.title}
+          </h4>
+
+          <p className="mb-5 break-keep text-[14px] font-bold leading-[1.75] text-slate-700 dark:text-slate-300">
+            {lowestScoreItem.description}
+          </p>
+
+          <Link
+            to={lowestScoreItem.path}
+            className="inline-flex rounded-full bg-amber-600 px-[18px] py-3 text-[14px] font-black text-white hover:bg-amber-700"
+          >
+            {lowestScoreItem.buttonLabel}
+          </Link>
+        </article>
+
+        <article className="rounded-[28px] border border-slate-200 bg-white p-[26px] shadow-[0_10px_30px_rgba(15,23,42,0.07)] dark:border-slate-700 dark:bg-slate-900">
+          <div className="mb-5">
+            <p className="mb-2 text-[13px] font-black text-blue-700 dark:text-blue-300">
+              Next Best Actions
+            </p>
+            <h3 className="text-[23px] font-black tracking-[-0.5px] text-slate-900 dark:text-white">
+              지금 바로 이어갈 추천 액션
+            </h3>
+          </div>
+
+          <div className="grid gap-3">
+            {actionCards.map((action) => (
+              <div
+                key={action.title}
+                className="flex items-center justify-between gap-4 rounded-[20px] border border-slate-200 bg-slate-50 p-[16px] dark:border-slate-700 dark:bg-slate-800"
+              >
+                <div>
+                  <span className="mb-2 inline-flex rounded-full bg-blue-50 px-[10px] py-[6px] text-[11px] font-black text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                    {action.label}
+                  </span>
+                  <strong className="mb-1 block break-keep text-[15px] font-black text-slate-900 dark:text-white">
+                    {action.title}
+                  </strong>
+                  <p className="break-keep text-[12px] font-bold leading-[1.6] text-slate-600 dark:text-slate-300">
+                    {action.description}
+                  </p>
+                </div>
+
+                <Link
+                  to={action.path}
+                  className="shrink-0 rounded-full border border-blue-600 px-[14px] py-[9px] text-[12px] font-black text-blue-700 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-950"
+                >
+                  이동
+                </Link>
+              </div>
+            ))}
+          </div>
+        </article>
+      </section>
+
+      <section className="mb-[22px] rounded-[28px] border border-slate-200 bg-white p-[26px] shadow-[0_10px_30px_rgba(15,23,42,0.07)] dark:border-slate-700 dark:bg-slate-900">
+        <div className="mb-[18px]">
+          <p className="mb-2 text-[13px] font-black text-blue-700 dark:text-blue-300">
+            Support Flow
+          </p>
+          <h3 className="text-[22px] font-black tracking-[-0.5px] text-slate-900 dark:text-white">
+            지원 준비 흐름
+          </h3>
+          <p className="mt-2 break-keep text-[14px] leading-[1.65] text-slate-600 dark:text-slate-300">
+            Articlue의 각 화면이 어떤 순서로 연결되는지 한눈에 확인할 수 있습니다.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-5 gap-3">
+          {supportFlow.map(([step, title, desc]) => (
+            <div
+              key={step}
+              className="rounded-[22px] border border-slate-200 bg-slate-50 p-[17px] dark:border-slate-700 dark:bg-slate-800"
+            >
+              <span className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-[12px] font-black text-white">
+                {step}
+              </span>
+              <strong className="mb-2 block text-[15px] font-black text-slate-900 dark:text-white">
+                {title}
+              </strong>
+              <p className="break-keep text-[12px] font-bold leading-[1.6] text-slate-600 dark:text-slate-300">
+                {desc}
+              </p>
+            </div>
+          ))}
+        </div>
       </section>
 
       <section className="mb-[22px] rounded-[28px] border border-slate-200 bg-white p-[26px] shadow-[0_10px_30px_rgba(15,23,42,0.07)] dark:border-slate-700 dark:bg-slate-900">
@@ -470,32 +764,6 @@ export default function Growth() {
             </ResponsiveContainer>
           </div>
         </article>
-      </section>
-
-      <section className="mb-[22px] grid grid-cols-3 gap-4">
-        {summaryCards.map(([label, value, badge]) => (
-          <article
-            key={label}
-            className="rounded-[26px] border border-slate-200 bg-white p-[22px] shadow-[0_10px_30px_rgba(15,23,42,0.07)] dark:border-slate-700 dark:bg-slate-900"
-          >
-            <div className="mb-[14px] flex items-center justify-between gap-3">
-              <span className="text-[13px] font-black text-slate-600 dark:text-slate-300">
-                {label}
-              </span>
-              <span className="rounded-full bg-blue-50 px-[10px] py-[7px] text-[12px] font-black text-blue-700 dark:bg-blue-950 dark:text-blue-300">
-                {badge}
-              </span>
-            </div>
-
-            <div className="mb-2 text-[28px] font-black tracking-[-0.8px] text-slate-900 dark:text-white">
-              {value}
-            </div>
-
-            <p className="break-keep text-[13px] leading-[1.65] text-slate-600 dark:text-slate-300">
-              공통 점수 계산 기준으로 산출된 핵심 요약입니다.
-            </p>
-          </article>
-        ))}
       </section>
 
       <section className="mb-5 grid grid-cols-[1fr_1fr] gap-5">

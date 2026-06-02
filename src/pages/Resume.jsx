@@ -1,44 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AppLayout from "../components/AppLayout.jsx";
+import { notifyCareerScoreChanged } from "../utils/careerScore.js";
 
 const RESUME_DRAFT_KEY = "articlue_resume_draft";
 const RESUME_PROGRESS_KEY = "articlue_resume_progress";
 const PROFILE_NAME_KEY = "articlue_profile_name";
 const GITHUB_KEY = "articlue_github_connection";
 const TECH_STACK_KEY = "articlue-resume-techs";
+const USER_PROFILE_KEY = "articlue_user_profile";
 
 const programmingLanguages = [
-  "Python",
-  "JavaScript",
-  "TypeScript",
-  "Java",
-  "Kotlin",
-  "Swift",
-  "Dart",
-  "C#",
-  "C++",
-  "Go",
-  "PHP",
-  "Ruby",
-  "Rust",
-  "Scala",
-  "R",
-  "HTML/CSS",
+  "Python", "JavaScript", "TypeScript", "Java", "Kotlin", "Swift", "Dart",
+  "C#", "C++", "Go", "PHP", "Ruby", "Rust", "Scala", "R", "HTML/CSS",
 ];
 
 const languageFrameworkMap = {
-  Python: [
-    "FastAPI",
-    "Django",
-    "Flask",
-    "PyTorch",
-    "TensorFlow",
-    "Pandas",
-    "Scikit-Learn",
-    "Numpy",
-    "LangChain",
-  ],
+  Python: ["FastAPI", "Django", "Flask", "PyTorch", "TensorFlow", "Pandas", "Scikit-Learn", "Numpy", "LangChain"],
   JavaScript: ["React", "Vue.js", "Next.js", "Svelte", "Node.js", "Express", "NestJS"],
   TypeScript: ["React", "Next.js", "Node.js", "NestJS", "Express", "Prisma"],
   Java: ["Spring", "Spring Boot", "JPA", "MyBatis", "Gradle", "Maven"],
@@ -57,35 +35,9 @@ const languageFrameworkMap = {
 };
 
 const commonTechGroups = [
-  {
-    label: "Database",
-    items: [
-      "MySQL",
-      "PostgreSQL",
-      "MongoDB",
-      "Redis",
-      "Oracle",
-      "MariaDB",
-      "Elasticsearch",
-    ],
-  },
-  {
-    label: "DevOps & Cloud",
-    items: [
-      "AWS",
-      "Docker",
-      "Kubernetes",
-      "GCP",
-      "Azure",
-      "GitHub Actions",
-      "Jenkins",
-      "Terraform",
-    ],
-  },
-  {
-    label: "Tools & Collaboration",
-    items: ["Git", "GitHub", "Jira", "Figma", "Slack", "Notion"],
-  },
+  { label: "Database", items: ["MySQL", "PostgreSQL", "MongoDB", "Redis", "Oracle", "MariaDB", "Elasticsearch"] },
+  { label: "DevOps & Cloud", items: ["AWS", "Docker", "Kubernetes", "GCP", "Azure", "GitHub Actions", "Jenkins", "Terraform"] },
+  { label: "Tools & Collaboration", items: ["Git", "GitHub", "Jira", "Figma", "Slack", "Notion"] },
 ];
 
 const allSelectableTechs = new Set([
@@ -116,6 +68,9 @@ const initialForm = {
   email: "",
   birth: "",
   region: "",
+  postcode: "",
+  baseAddress: "",
+  detailAddress: "",
   gender: "",
   military: "",
   preferredArea: "",
@@ -221,6 +176,23 @@ function readJson(key, fallback) {
   }
 }
 
+function getProfileFormFields() {
+  const profile = readJson(USER_PROFILE_KEY, {});
+
+  return {
+    name: profile?.name || "",
+    phone: profile?.phone || "",
+    email: profile?.email || "",
+    birth: profile?.birth || "",
+    region: profile?.address || "",
+    postcode: profile?.postcode || "",
+    baseAddress: profile?.baseAddress || profile?.address || "",
+    detailAddress: profile?.detailAddress || "",
+    gender: profile?.gender || "",
+    military: profile?.military || "",
+  };
+}
+
 function Field({ label, children }) {
   return (
     <div className="mb-4">
@@ -253,28 +225,6 @@ function Section({ id, title, description, action, children }) {
     </section>
   );
 }
-
-function ChoiceGroup({ value, options, onChange }) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      {options.map((option) => (
-        <button
-          key={option}
-          type="button"
-          onClick={() => onChange(option)}
-          className={`rounded-full border px-[14px] py-[10px] text-[13px] font-black transition ${
-            value === option
-              ? "border-blue-600 bg-blue-600 text-white"
-              : "border-slate-200 bg-white text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
-          }`}
-        >
-          {option}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 
 function TechStackBlock({ selectedTechs, onChange }) {
   const cleanSelectedTechs = sanitizeTechStacks(selectedTechs);
@@ -433,12 +383,14 @@ const outlineButtonClass =
 export default function Resume() {
   const navigate = useNavigate();
   const savedDraft = readJson(RESUME_DRAFT_KEY, null);
+  const savedProfileFields = getProfileFormFields();
   const savedGithub = readJson(GITHUB_KEY, initialGithub);
   const savedTechs = sanitizeTechStacks(readJson(TECH_STACK_KEY, []));
 
   const [form, setForm] = useState(() => ({
     ...initialForm,
     ...(savedDraft?.form || {}),
+    ...savedProfileFields,
   }));
 
   const [techStacks, setTechStacks] = useState(() => {
@@ -455,9 +407,7 @@ export default function Resume() {
   );
 
   const [certificates, setCertificates] = useState(() =>
-    savedDraft?.certificates?.length
-      ? savedDraft.certificates
-      : [initialCertificate]
+    savedDraft?.certificates?.length ? savedDraft.certificates : [initialCertificate]
   );
 
   const [careers, setCareers] = useState(() =>
@@ -483,6 +433,40 @@ export default function Resume() {
   const [missingModalOpen, setMissingModalOpen] = useState(false);
   const [completeModalOpen, setCompleteModalOpen] = useState(false);
   const [missingItems, setMissingItems] = useState([]);
+  const [userProfile, setUserProfile] = useState(() => readJson(USER_PROFILE_KEY, {}));
+
+  const syncProfileFields = () => {
+    const nextProfile = readJson(USER_PROFILE_KEY, {});
+    const nextProfileFields = getProfileFormFields();
+
+    setUserProfile(nextProfile || {});
+
+    setForm((prev) => ({
+      ...prev,
+      ...nextProfileFields,
+    }));
+
+    if (nextProfileFields.name.trim()) {
+      localStorage.setItem(PROFILE_NAME_KEY, nextProfileFields.name.trim());
+    }
+  };
+
+  useEffect(() => {
+    syncProfileFields();
+
+    const handleFocus = () => syncProfileFields();
+    const handleStorage = (event) => {
+      if (event.key === USER_PROFILE_KEY) syncProfileFields();
+    };
+
+    window.addEventListener("focus", handleFocus);
+    window.addEventListener("storage", handleStorage);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, []);
 
   const progress = useMemo(() => {
     const basicRatio = getSectionRatio([
@@ -539,7 +523,6 @@ export default function Resume() {
       : 0;
 
     const portfolioRatio = files.length > 0 ? 1 : 0;
-
     const githubRatio = github.connected ? 1 : 0;
 
     const weightedScore =
@@ -565,6 +548,7 @@ export default function Resume() {
 
   useEffect(() => {
     localStorage.setItem(RESUME_PROGRESS_KEY, String(progress));
+    notifyCareerScoreChanged();
   }, [progress]);
 
   useEffect(() => {
@@ -581,6 +565,7 @@ export default function Resume() {
     };
 
     localStorage.setItem(RESUME_DRAFT_KEY, JSON.stringify(draft));
+
     const cleanTechStacks = sanitizeTechStacks(techStacks);
 
     if (cleanTechStacks.length !== techStacks.length) {
@@ -589,6 +574,7 @@ export default function Resume() {
     }
 
     localStorage.setItem(TECH_STACK_KEY, JSON.stringify(cleanTechStacks));
+    notifyCareerScoreChanged();
   }, [form, techStacks, experiences, essays, certificates, careers, files, github]);
 
   const showToast = (message) => {
@@ -598,11 +584,25 @@ export default function Resume() {
   };
 
   const updateForm = (key, value) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
+    const readOnlyProfileKeys = [
+      "name",
+      "phone",
+      "email",
+      "birth",
+      "region",
+      "postcode",
+      "baseAddress",
+      "detailAddress",
+      "gender",
+      "military",
+    ];
 
-    if (key === "name" && value.trim()) {
-      localStorage.setItem(PROFILE_NAME_KEY, value.trim());
+    if (readOnlyProfileKeys.includes(key)) {
+      showToast("기본 인적사항은 마이페이지에서 수정할 수 있습니다.");
+      return;
     }
+
+    setForm((prev) => ({ ...prev, [key]: value }));
   };
 
   const updateArray = (setter, index, key, value) => {
@@ -706,6 +706,7 @@ export default function Resume() {
     setGithub(nextGithub);
     localStorage.setItem(GITHUB_KEY, JSON.stringify(nextGithub));
     setGithubModalOpen(false);
+    notifyCareerScoreChanged();
     showToast("GitHub 계정 정보가 저장되었습니다.");
   };
 
@@ -734,6 +735,7 @@ export default function Resume() {
     const nextMissingItems = getMissingItems();
 
     localStorage.setItem(RESUME_PROGRESS_KEY, String(progress));
+    notifyCareerScoreChanged();
 
     if (nextMissingItems.length > 0) {
       setMissingItems(nextMissingItems);
@@ -748,6 +750,7 @@ export default function Resume() {
     localStorage.setItem(RESUME_PROGRESS_KEY, String(progress));
     localStorage.setItem("articlue_resume_submitted", "true");
     localStorage.setItem("articlue_resume_submitted_at", new Date().toISOString());
+    notifyCareerScoreChanged();
     setMissingModalOpen(false);
     setCompleteModalOpen(true);
   };
@@ -755,6 +758,7 @@ export default function Resume() {
   const saveAndExit = () => {
     localStorage.setItem(RESUME_PROGRESS_KEY, String(progress));
     localStorage.setItem("articlue_resume_continue", "true");
+    notifyCareerScoreChanged();
     showToast("임시 저장되었습니다.");
     navigate("/home");
   };
@@ -775,11 +779,7 @@ export default function Resume() {
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={saveAndExit}
-            className={secondaryButtonClass}
-          >
+          <button type="button" onClick={saveAndExit} className={secondaryButtonClass}>
             임시 저장 후 나가기
           </button>
         </div>
@@ -842,80 +842,6 @@ export default function Resume() {
             />
           </Field>
 
-          <Field label="이름">
-            <input
-              className={inputClass}
-              placeholder="이름 입력"
-              value={form.name}
-              onChange={(e) => updateForm("name", e.target.value)}
-            />
-          </Field>
-
-          <Field label="연락처">
-            <input
-              className={inputClass}
-              type="tel"
-              placeholder="010-0000-0000"
-              value={form.phone}
-              onChange={(e) => updateForm("phone", e.target.value)}
-            />
-          </Field>
-
-          <Field label="이메일">
-            <input
-              className={inputClass}
-              type="email"
-              placeholder="example@email.com"
-              value={form.email}
-              onChange={(e) => updateForm("email", e.target.value)}
-            />
-          </Field>
-
-          <Field label="생년월일">
-            <input
-              className={inputClass}
-              type="date"
-              value={form.birth}
-              onChange={(e) => updateForm("birth", e.target.value)}
-            />
-          </Field>
-
-          <Field label="거주지">
-            <div className="flex gap-2">
-              <input
-                className={inputClass}
-                placeholder="주소 검색"
-                value={form.region}
-                onChange={(e) => updateForm("region", e.target.value)}
-              />
-              <button
-                type="button"
-                onClick={() => showToast("주소 검색 API 연동 예정입니다.")}
-                className={outlineButtonClass}
-              >
-                검색
-              </button>
-            </div>
-          </Field>
-        </div>
-
-        <div className="grid grid-cols-3 gap-4">
-          <Field label="성별">
-            <ChoiceGroup
-              value={form.gender}
-              options={["남성", "여성", "선택 안 함"]}
-              onChange={(value) => updateForm("gender", value)}
-            />
-          </Field>
-
-          <Field label="병역 여부">
-            <ChoiceGroup
-              value={form.military}
-              options={["군필", "미필", "해당 없음"]}
-              onChange={(value) => updateForm("military", value)}
-            />
-          </Field>
-
           <Field label="희망 지역">
             <select
               className={inputClass}
@@ -930,11 +856,59 @@ export default function Resume() {
           </Field>
         </div>
 
+        <div className="mb-6 rounded-[24px] border border-blue-100 bg-blue-50/70 p-5 dark:border-blue-900 dark:bg-blue-950/30">
+          <div className="mb-4 flex items-start justify-between gap-4">
+            <div>
+              <div className="mb-2 inline-flex rounded-full bg-white px-3 py-2 text-[12px] font-black text-blue-700 dark:bg-slate-900 dark:text-blue-300">
+                MyPage 프로필 연동 완료
+              </div>
+              <h3 className="text-[19px] font-black tracking-[-0.4px] text-slate-900 dark:text-white">
+                기본 인적사항은 마이페이지 정보로 자동 반영됩니다.
+              </h3>
+              <p className="mt-2 break-keep text-[13px] font-extrabold leading-[1.65] text-slate-600 dark:text-slate-300">
+                이름, 연락처, 이메일, 생년월일, 주소, 성별, 병역 여부는 이력서 작성 화면에서 수정할 수 없습니다. 정보 변경은 내 커리어 관리 화면에서 진행해주세요.
+              </p>
+            </div>
+
+            <button type="button" onClick={() => navigate("/mypage")} className={outlineButtonClass}>
+              프로필 수정하기
+            </button>
+          </div>
+
+          <div className="grid grid-cols-4 gap-3">
+            {[
+              ["이름", form.name],
+              ["닉네임", userProfile?.nickname],
+              ["이메일", form.email],
+              ["연락처", form.phone],
+              ["생년월일", form.birth],
+              ["성별", form.gender],
+              ["병역 여부", form.military],
+              ["우편번호", userProfile?.postcode || form.postcode],
+              ["주소", userProfile?.baseAddress || form.baseAddress || form.region],
+              ["상세주소", userProfile?.detailAddress || form.detailAddress],
+            ].map(([label, value]) => (
+              <div
+                key={label}
+                className="min-h-[82px] rounded-[18px] border border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900"
+              >
+                <span className="mb-2 block text-[12px] font-black text-slate-500 dark:text-slate-400">
+                  {label}
+                </span>
+                <strong className="block break-keep text-[14px] font-black leading-[1.5] text-slate-800 dark:text-slate-100">
+                  {value || "마이페이지에서 입력 필요"}
+                </strong>
+              </div>
+            ))}
+          </div>
+        </div>
+
         <div id="section-tech-stack">
           <TechStackBlock
             selectedTechs={techStacks}
             onChange={(nextTechs) => {
               setTechStacks(sanitizeTechStacks(nextTechs));
+              notifyCareerScoreChanged();
               showToast("기술 스택이 저장되었습니다.");
             }}
           />
@@ -1046,7 +1020,9 @@ export default function Resume() {
             className="mb-4 rounded-[22px] border border-slate-200 bg-slate-100 p-5 last:mb-0 dark:border-slate-700 dark:bg-slate-800"
           >
             <div className="mb-4 flex items-center justify-between gap-3">
-              <strong className="text-[16px] font-black text-slate-900 dark:text-white">경험 {index + 1}</strong>
+              <strong className="text-[16px] font-black text-slate-900 dark:text-white">
+                경험 {index + 1}
+              </strong>
               {experiences.length > 1 && (
                 <button
                   type="button"
@@ -1062,11 +1038,7 @@ export default function Resume() {
               <Field label="과제명/활동명">
                 <input
                   className={inputClass}
-                  placeholder={
-                    index === 0
-                      ? "예: 스마트인재개발원 핵심 프로젝트"
-                      : "활동명 입력"
-                  }
+                  placeholder={index === 0 ? "예: 스마트인재개발원 핵심 프로젝트" : "활동명 입력"}
                   value={experience.title}
                   onChange={(e) =>
                     updateArray(setExperiences, index, "title", e.target.value)
@@ -1080,12 +1052,7 @@ export default function Resume() {
                     type="checkbox"
                     checked={experience.isOngoing}
                     onChange={(e) =>
-                      updateArray(
-                        setExperiences,
-                        index,
-                        "isOngoing",
-                        e.target.checked
-                      )
+                      updateArray(setExperiences, index, "isOngoing", e.target.checked)
                     }
                   />
                   진행 중
@@ -1202,11 +1169,7 @@ export default function Resume() {
           <div className="mt-[14px] flex flex-col gap-[10px] rounded-[18px] border border-emerald-200 bg-emerald-50 p-[14px] text-[14px] font-black text-emerald-600 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300">
             <div className="flex items-center justify-between gap-3">
               <span>업로드된 파일 {files.length}개</span>
-              <button
-                type="button"
-                onClick={() => setFiles([])}
-                className={secondaryButtonClass}
-              >
+              <button type="button" onClick={() => setFiles([])} className={secondaryButtonClass}>
                 전체 삭제
               </button>
             </div>
@@ -1314,12 +1277,7 @@ export default function Resume() {
                   placeholder="예: 한국산업인력공단"
                   value={certificate.organization}
                   onChange={(e) =>
-                    updateArray(
-                      setCertificates,
-                      index,
-                      "organization",
-                      e.target.value
-                    )
+                    updateArray(setCertificates, index, "organization", e.target.value)
                   }
                 />
               </Field>
@@ -1344,7 +1302,9 @@ export default function Resume() {
             className="mb-4 rounded-[22px] border border-slate-200 bg-slate-100 p-5 last:mb-0 dark:border-slate-700 dark:bg-slate-800"
           >
             <div className="mb-4 flex items-center justify-between gap-3">
-              <strong className="text-[16px] font-black text-slate-900 dark:text-white">경력 {index + 1}</strong>
+              <strong className="text-[16px] font-black text-slate-900 dark:text-white">
+                경력 {index + 1}
+              </strong>
               {careers.length > 1 && (
                 <button
                   type="button"
@@ -1431,12 +1391,7 @@ export default function Resume() {
                     type="date"
                     value={career.expectedLeaveDate}
                     onChange={(e) =>
-                      updateArray(
-                        setCareers,
-                        index,
-                        "expectedLeaveDate",
-                        e.target.value
-                      )
+                      updateArray(setCareers, index, "expectedLeaveDate", e.target.value)
                     }
                   />
                 </Field>
@@ -1473,11 +1428,7 @@ export default function Resume() {
           <p className="text-[14px] font-extrabold text-slate-600 dark:text-slate-300">
             최종 제출하면 AI가 이력서를 분석해 추천 정확도를 업데이트합니다.
           </p>
-          <button
-            type="button"
-            onClick={submitResume}
-            className={primaryButtonClass}
-          >
+          <button type="button" onClick={submitResume} className={primaryButtonClass}>
             최종 제출하고 기업 추천받기
           </button>
         </div>
@@ -1507,11 +1458,7 @@ export default function Resume() {
             ))}
           </div>
           <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={forceSubmitResume}
-              className={secondaryButtonClass}
-            >
+            <button type="button" onClick={forceSubmitResume} className={secondaryButtonClass}>
               그대로 제출하기
             </button>
             <button
@@ -1555,18 +1502,10 @@ export default function Resume() {
             ))}
           </div>
           <div className="flex justify-center gap-2">
-            <button
-              type="button"
-              onClick={() => navigate("/home")}
-              className={secondaryButtonClass}
-            >
+            <button type="button" onClick={() => navigate("/home")} className={secondaryButtonClass}>
               AI 커리어 홈으로 이동
             </button>
-            <button
-              type="button"
-              onClick={() => navigate("/fitting")}
-              className={primaryButtonClass}
-            >
+            <button type="button" onClick={() => navigate("/fitting")} className={primaryButtonClass}>
               추천 기업 보러가기
             </button>
           </div>
@@ -1639,18 +1578,10 @@ export default function Resume() {
           </div>
 
           <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => setGithubModalOpen(false)}
-              className={secondaryButtonClass}
-            >
+            <button type="button" onClick={() => setGithubModalOpen(false)} className={secondaryButtonClass}>
               취소
             </button>
-            <button
-              type="button"
-              onClick={saveGithubConnection}
-              className={primaryButtonClass}
-            >
+            <button type="button" onClick={saveGithubConnection} className={primaryButtonClass}>
               연동 정보 저장
             </button>
           </div>

@@ -2,16 +2,20 @@ import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import AppLayout from "../components/AppLayout.jsx";
 import { isAuthenticated, clearAuthStorage } from "../utils/auth.js";
+import { openAddressSearch } from "../utils/postcode.js";
 import {
   getCareerScores,
   getNextAction,
   getReadinessStatus,
   getTechStacks,
+  notifyCareerScoreChanged,
   readJson,
 } from "../utils/careerScore.js";
 
 const INTERVIEW_RESULT_KEY = "articlue_interview_results";
 const COVER_LETTER_KEY = "articlue_cover_letters";
+const USER_PROFILE_KEY = "articlue_user_profile";
+const PROFILE_NAME_KEY = "articlue_profile_name";
 
 const FAVORITE_KEYS = [
   "articlue_favorite_jobs",
@@ -25,6 +29,58 @@ const COMPANY_NAME_MAP = {
   toss: "토스",
   kakao: "카카오",
 };
+
+const EMPTY_USER_PROFILE = {
+  name: "",
+  nickname: "",
+  email: "",
+  phone: "",
+  birth: "",
+  postcode: "",
+  address: "",
+  baseAddress: "",
+  detailAddress: "",
+  gender: "",
+  military: "",
+};
+
+function readCurrentUser() {
+  try {
+    return JSON.parse(localStorage.getItem("articlue_current_user") || "null");
+  } catch {
+    return null;
+  }
+}
+
+function readUserProfile() {
+  const currentUser = readCurrentUser();
+  const savedProfile = readJson(USER_PROFILE_KEY, {});
+
+  return {
+    ...EMPTY_USER_PROFILE,
+    name:
+      savedProfile?.name ||
+      localStorage.getItem(PROFILE_NAME_KEY) ||
+      currentUser?.name ||
+      "사용자",
+    nickname: savedProfile?.nickname || currentUser?.nickname || "",
+    email: savedProfile?.email || currentUser?.email || "",
+    phone: savedProfile?.phone || currentUser?.phone || "",
+    birth: savedProfile?.birth || currentUser?.birth || "",
+    postcode: savedProfile?.postcode || currentUser?.postcode || "",
+    address: savedProfile?.address || currentUser?.address || "",
+    baseAddress:
+      savedProfile?.baseAddress ||
+      currentUser?.baseAddress ||
+      savedProfile?.address ||
+      currentUser?.address ||
+      "",
+    detailAddress:
+      savedProfile?.detailAddress || currentUser?.detailAddress || "",
+    gender: savedProfile?.gender || currentUser?.gender || "",
+    military: savedProfile?.military || currentUser?.military || "",
+  };
+}
 
 function applyDocumentTheme(theme) {
   if (theme === "dark") document.documentElement.classList.add("dark");
@@ -199,14 +255,14 @@ export default function MyPage() {
   const [theme, setTheme] = useState(
     () => localStorage.getItem("articlue-theme") || "light"
   );
+  const [userProfile, setUserProfile] = useState(() => readUserProfile());
+  const [profileDraft, setProfileDraft] = useState(() => readUserProfile());
+  const [profileEditing, setProfileEditing] = useState(false);
 
   const progress = careerScores.resume;
   const matchScore = careerScores.overall;
   const readinessStatus = getReadinessStatus(matchScore);
   const insight = getInsightText(careerScores);
-
-  const submitted =
-    localStorage.getItem("articlue_resume_submitted") === "true";
 
   const techSummary =
     techStacks.length > 0
@@ -269,20 +325,11 @@ export default function MyPage() {
     return actions.slice(0, 3);
   }, [nextAction, firstFavorite]);
 
-  const currentUser = (() => {
-    try {
-      return JSON.parse(localStorage.getItem("articlue_current_user") || "null");
-    } catch {
-      return null;
-    }
-  })();
-
-  const profileName =
-    localStorage.getItem("articlue_profile_name") ||
-    currentUser?.name ||
-    "사용자";
+  const profileName = userProfile.name || "사용자";
 
   const refreshPageData = () => {
+    const nextProfile = readUserProfile();
+
     setFavorites(readFavoriteJobs());
     setInterviewResults(readInterviewResults());
     setCoverLetters(readCoverLetters());
@@ -290,6 +337,11 @@ export default function MyPage() {
     setCareerScores(getCareerScores());
     setNextAction(getNextAction());
     setTechStacks(getTechStacks());
+    setUserProfile(nextProfile);
+
+    if (!profileEditing) {
+      setProfileDraft(nextProfile);
+    }
   };
 
   useEffect(() => {
@@ -317,6 +369,7 @@ export default function MyPage() {
         event.key === "articlue_resume_progress" ||
         event.key === "articlue_profile_image" ||
         event.key === "articlue_profile_name" ||
+        event.key === USER_PROFILE_KEY ||
         event.key === INTERVIEW_RESULT_KEY ||
         event.key === COVER_LETTER_KEY ||
         event.key === "articlue-resume-techs"
@@ -347,7 +400,7 @@ export default function MyPage() {
       window.removeEventListener("storage", handleStorage);
       window.removeEventListener("focus", handleFocus);
     };
-  }, [navigate]);
+  }, [navigate, profileEditing]);
 
   const showToast = (message) => {
     setToast(message);
@@ -414,6 +467,106 @@ export default function MyPage() {
     setProfileImage("");
     showToast("기본 프로필 이미지로 변경되었습니다.");
   };
+
+  const updateProfileDraft = (key, value) => {
+    setProfileDraft((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const startProfileEdit = () => {
+    setProfileDraft(userProfile);
+    setProfileEditing(true);
+  };
+
+  const cancelProfileEdit = () => {
+    setProfileDraft(userProfile);
+    setProfileEditing(false);
+  };
+
+  const handleProfileAddressSearch = () => {
+    openAddressSearch((data) => {
+      setProfileDraft((prev) => {
+        const nextBaseAddress = data.address || "";
+        const nextDetailAddress = prev.detailAddress || "";
+
+        return {
+          ...prev,
+          postcode: data.zonecode || "",
+          baseAddress: nextBaseAddress,
+          address: [nextBaseAddress, nextDetailAddress].filter(Boolean).join(" "),
+        };
+      });
+    });
+  };
+
+  const saveUserProfile = () => {
+    const trimmedBaseAddress = (profileDraft.baseAddress || "").trim();
+    const trimmedDetailAddress = (profileDraft.detailAddress || "").trim();
+
+    const nextProfile = {
+      name: profileDraft.name.trim(),
+      nickname: profileDraft.nickname.trim(),
+      email: profileDraft.email.trim().toLowerCase(),
+      phone: profileDraft.phone.trim(),
+      birth: profileDraft.birth,
+      postcode: (profileDraft.postcode || "").trim(),
+      baseAddress: trimmedBaseAddress,
+      detailAddress: trimmedDetailAddress,
+      address: [trimmedBaseAddress, trimmedDetailAddress]
+        .filter(Boolean)
+        .join(" "),
+      gender: profileDraft.gender,
+      military: profileDraft.military,
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (!nextProfile.name) {
+      showToast("이름을 입력해 주세요.");
+      return;
+    }
+
+    if (!nextProfile.email) {
+      showToast("이메일을 입력해 주세요.");
+      return;
+    }
+
+    localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(nextProfile));
+    localStorage.setItem(PROFILE_NAME_KEY, nextProfile.name);
+
+    const currentUser = readCurrentUser();
+    if (currentUser) {
+      localStorage.setItem(
+        "articlue_current_user",
+        JSON.stringify({
+          ...currentUser,
+          ...nextProfile,
+        })
+      );
+    }
+
+    const users = readJson("articlue_users", []);
+    if (Array.isArray(users)) {
+      const nextUsers = users.map((user) =>
+        user.email === userProfile.email || user.email === nextProfile.email
+          ? { ...user, ...nextProfile }
+          : user
+      );
+      localStorage.setItem("articlue_users", JSON.stringify(nextUsers));
+    }
+
+    setUserProfile(nextProfile);
+    setProfileDraft(nextProfile);
+    setProfileEditing(false);
+    notifyCareerScoreChanged();
+    showToast("프로필 정보가 저장되었습니다.");
+  };
+
+  const profileFields = [
+    ["name", "이름", "text", "이름 입력"],
+    ["nickname", "닉네임", "text", "닉네임 입력"],
+    ["email", "이메일", "email", "example@email.com"],
+    ["phone", "전화번호", "tel", "010-0000-0000"],
+    ["birth", "생년월일", "date", ""],
+  ];
 
   if (!authChecked) return null;
 
@@ -633,7 +786,7 @@ export default function MyPage() {
 
         <section className="mb-[22px] grid grid-cols-[1fr_.9fr] gap-[22px]">
           <div className="rounded-[26px] border border-slate-200 bg-white p-[25px] shadow-[0_10px_30px_rgba(15,23,42,0.07)] dark:border-slate-700 dark:bg-slate-900">
-            <div className="grid grid-cols-[auto_1fr] items-start gap-[18px]">
+            <div className="mb-5 grid grid-cols-[auto_1fr] items-start gap-[18px]">
               <div
                 className="flex h-[84px] w-[84px] items-center justify-center overflow-hidden rounded-[28px] bg-gradient-to-br from-blue-600 to-blue-300 text-[28px] font-black text-white"
                 style={
@@ -654,7 +807,9 @@ export default function MyPage() {
                   {profileName}
                 </div>
                 <div className="mb-3 text-[14px] font-extrabold text-slate-600 dark:text-slate-300">
-                  {techSummary}
+                  {userProfile.nickname
+                    ? `${userProfile.nickname} · ${techSummary}`
+                    : techSummary}
                 </div>
 
                 <div className="flex flex-wrap gap-2">
@@ -672,6 +827,32 @@ export default function MyPage() {
                   >
                     기본 사진으로 되돌리기
                   </button>
+                  {!profileEditing ? (
+                    <button
+                      type="button"
+                      onClick={startProfileEdit}
+                      className="rounded-full border border-blue-600 bg-blue-600 px-3 py-2 text-[12px] font-black text-white"
+                    >
+                      프로필 수정
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={saveUserProfile}
+                        className="rounded-full border border-blue-600 bg-blue-600 px-3 py-2 text-[12px] font-black text-white"
+                      >
+                        저장
+                      </button>
+                      <button
+                        type="button"
+                        onClick={cancelProfileEdit}
+                        className="rounded-full border border-slate-200 bg-slate-100 px-3 py-2 text-[12px] font-black text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                      >
+                        취소
+                      </button>
+                    </>
+                  )}
                   <Link
                     to="/resume"
                     className="rounded-full border border-slate-200 bg-slate-100 px-3 py-2 text-[12px] font-black text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
@@ -687,6 +868,159 @@ export default function MyPage() {
                   className="hidden"
                   onChange={handleProfileImageChange}
                 />
+              </div>
+            </div>
+
+            <div className="mb-5 rounded-[22px] border border-blue-100 bg-blue-50/70 p-4 dark:border-blue-900 dark:bg-blue-950/30">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-[17px] font-black text-slate-900 dark:text-white">
+                    사용자 프로필 관리
+                  </h3>
+                  <p className="mt-1 text-[13px] font-bold leading-[1.6] text-slate-600 dark:text-slate-300">
+                    이 정보는 이력서 작성 페이지에서 읽기 전용 기본 정보로 사용됩니다.
+                  </p>
+                </div>
+                <span className="rounded-full bg-white px-3 py-2 text-[12px] font-black text-blue-700 dark:bg-slate-900 dark:text-blue-300">
+                  {profileEditing ? "수정 중" : "기본 정보"}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                {profileFields.map(([key, label, type, placeholder]) => (
+                  <label key={key} className="block">
+                    <span className="mb-2 block text-[12px] font-black text-slate-600 dark:text-slate-300">
+                      {label}
+                    </span>
+                    <input
+                      type={type}
+                      value={profileDraft[key] || ""}
+                      readOnly={!profileEditing}
+                      placeholder={placeholder}
+                      onChange={(event) =>
+                        updateProfileDraft(key, event.target.value)
+                      }
+                      className={`h-[46px] w-full rounded-2xl border px-3 text-[13px] font-bold outline-none transition ${
+                        profileEditing
+                          ? "border-blue-200 bg-white text-slate-900 focus:border-blue-600 dark:border-blue-800 dark:bg-slate-900 dark:text-white"
+                          : "border-slate-200 bg-slate-100 text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400"
+                      }`}
+                    />
+                  </label>
+                ))}
+
+                <label className="block">
+                  <span className="mb-2 block text-[12px] font-black text-slate-600 dark:text-slate-300">
+                    우편번호
+                  </span>
+
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={profileDraft.postcode || ""}
+                      readOnly
+                      placeholder="주소 검색"
+                      className="h-[46px] w-full rounded-2xl border border-slate-200 bg-slate-100 px-3 text-[13px] font-bold text-slate-500 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400"
+                    />
+
+                    {profileEditing && (
+                      <button
+                        type="button"
+                        onClick={handleProfileAddressSearch}
+                        className="h-[46px] shrink-0 rounded-2xl bg-slate-900 px-4 text-[12px] font-black text-white transition hover:bg-slate-800 dark:bg-white dark:text-slate-900"
+                      >
+                        주소 검색
+                      </button>
+                    )}
+                  </div>
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-[12px] font-black text-slate-600 dark:text-slate-300">
+                    주소
+                  </span>
+                  <input
+                    type="text"
+                    value={profileDraft.baseAddress || ""}
+                    readOnly
+                    placeholder="주소 검색 버튼을 눌러 주소를 선택해 주세요"
+                    className="h-[46px] w-full rounded-2xl border border-slate-200 bg-slate-100 px-3 text-[13px] font-bold text-slate-500 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-[12px] font-black text-slate-600 dark:text-slate-300">
+                    상세주소
+                  </span>
+                  <input
+                    type="text"
+                    value={profileDraft.detailAddress || ""}
+                    readOnly={!profileEditing}
+                    placeholder="상세주소 입력"
+                    onChange={(event) => {
+                      const nextDetailAddress = event.target.value;
+
+                      setProfileDraft((prev) => ({
+                        ...prev,
+                        detailAddress: nextDetailAddress,
+                        address: [prev.baseAddress || "", nextDetailAddress]
+                          .filter(Boolean)
+                          .join(" "),
+                      }));
+                    }}
+                    className={`h-[46px] w-full rounded-2xl border px-3 text-[13px] font-bold outline-none transition ${
+                      profileEditing
+                        ? "border-blue-200 bg-white text-slate-900 focus:border-blue-600 dark:border-blue-800 dark:bg-slate-900 dark:text-white"
+                        : "border-slate-200 bg-slate-100 text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400"
+                    }`}
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-[12px] font-black text-slate-600 dark:text-slate-300">
+                    성별
+                  </span>
+                  <select
+                    value={profileDraft.gender || ""}
+                    disabled={!profileEditing}
+                    onChange={(event) =>
+                      updateProfileDraft("gender", event.target.value)
+                    }
+                    className={`h-[46px] w-full rounded-2xl border px-3 text-[13px] font-bold outline-none transition ${
+                      profileEditing
+                        ? "border-blue-200 bg-white text-slate-900 focus:border-blue-600 dark:border-blue-800 dark:bg-slate-900 dark:text-white"
+                        : "border-slate-200 bg-slate-100 text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400"
+                    }`}
+                  >
+                    <option value="">성별 선택</option>
+                    <option value="남성">남성</option>
+                    <option value="여성">여성</option>
+                    <option value="선택 안 함">선택 안 함</option>
+                  </select>
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-[12px] font-black text-slate-600 dark:text-slate-300">
+                    병역여부
+                  </span>
+                  <select
+                    value={profileDraft.military || ""}
+                    disabled={!profileEditing}
+                    onChange={(event) =>
+                      updateProfileDraft("military", event.target.value)
+                    }
+                    className={`h-[46px] w-full rounded-2xl border px-3 text-[13px] font-bold outline-none transition ${
+                      profileEditing
+                        ? "border-blue-200 bg-white text-slate-900 focus:border-blue-600 dark:border-blue-800 dark:bg-slate-900 dark:text-white"
+                        : "border-slate-200 bg-slate-100 text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400"
+                    }`}
+                  >
+                    <option value="">병역여부 선택</option>
+                    <option value="군필">군필</option>
+                    <option value="미필">미필</option>
+                    <option value="해당 없음">해당 없음</option>
+                  </select>
+                </label>
               </div>
             </div>
 

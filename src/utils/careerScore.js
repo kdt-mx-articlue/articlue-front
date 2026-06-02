@@ -3,6 +3,26 @@ const COVER_LETTER_KEY = "articlue_cover_letters";
 const INTERVIEW_RESULT_KEY = "articlue_interview_results";
 const TECH_STACK_KEY = "articlue-resume-techs";
 
+export const CAREER_SCORE_EVENT = "articlue-career-score-change";
+
+export function notifyCareerScoreChanged() {
+  window.dispatchEvent(new Event(CAREER_SCORE_EVENT));
+}
+
+export function subscribeCareerScoreChange(callback) {
+  const handler = () => callback();
+
+  window.addEventListener(CAREER_SCORE_EVENT, handler);
+  window.addEventListener("storage", handler);
+  window.addEventListener("focus", handler);
+
+  return () => {
+    window.removeEventListener(CAREER_SCORE_EVENT, handler);
+    window.removeEventListener("storage", handler);
+    window.removeEventListener("focus", handler);
+  };
+}
+
 export function readJson(key, fallback) {
   try {
     const raw = localStorage.getItem(key);

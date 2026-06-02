@@ -10,6 +10,7 @@ import {
 } from "../utils/careerScore.js";
 
 const FAVORITE_KEY = "articlue_favorite_jobs";
+const COVER_LETTER_KEY = "articlue_cover_letters";
 const INTERVIEW_RESULT_KEY = "articlue_interview_results";
 
 const fallbackCompanies = [
@@ -24,15 +25,40 @@ function clamp(value) {
   return Math.min(100, Math.max(0, Math.round(number)));
 }
 
+function formatDate(value) {
+  if (!value) return "최근 기록";
+
+  try {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "최근 기록";
+
+    return date.toLocaleDateString("ko-KR", {
+      month: "short",
+      day: "numeric",
+      weekday: "short",
+    });
+  } catch {
+    return "최근 기록";
+  }
+}
+
+function getTimestamp(value) {
+  if (!value) return 0;
+  const time = new Date(value).getTime();
+  return Number.isNaN(time) ? 0 : time;
+}
+
 function readFavoriteJobs() {
   const data = readJson(FAVORITE_KEY, []);
   if (!Array.isArray(data)) return [];
 
-  return data.map((job, index) => ({
+  return data.map((job) => ({
     logo: String(job.company || job.name || "기업").slice(0, 2).toUpperCase(),
     title: `${job.company || job.name || "기업명 없음"} · ${
       job.role || job.position || "직무 정보 없음"
     }`,
+    company: job.company || job.name || "기업명 없음",
+    role: job.role || job.position || "직무 정보 없음",
     desc:
       job.desc ||
       job.description ||
@@ -65,6 +91,82 @@ function getLatestInterviewSummary() {
   };
 }
 
+function readCoverLetters() {
+  const parsed = readJson(COVER_LETTER_KEY, {});
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return [];
+
+  return Object.entries(parsed).map(([companyId, content]) => ({
+    id: companyId,
+    company: content?.company || companyId,
+    savedAt: content?.savedAt || null,
+  }));
+}
+
+function readInterviewResults() {
+  const parsed = readJson(INTERVIEW_RESULT_KEY, []);
+  return Array.isArray(parsed) ? parsed : [];
+}
+
+function buildRecentActivities() {
+  const favorites = readFavoriteJobs();
+  const coverLetters = readCoverLetters();
+  const interviewResults = readInterviewResults();
+  const techStacks = getTechStacks();
+
+  const items = [];
+
+  if (techStacks.length > 0) {
+    items.push({
+      id: "tech-stack",
+      title: "기술스택 업데이트",
+      desc: `${techStacks.slice(0, 4).join(" · ")}${
+        techStacks.length > 4 ? ` 외 ${techStacks.length - 4}개` : ""
+      }`,
+      meta: "이력서 데이터",
+      timestamp: 4,
+    });
+  }
+
+  favorites.slice(0, 2).forEach((job, index) => {
+    items.push({
+      id: `favorite-${job.title}-${index}`,
+      title: `${job.company} 공고 저장`,
+      desc: `${job.role} 지원 준비를 이어갈 수 있습니다.`,
+      meta: "찜한 기업",
+      timestamp: 3 - index,
+    });
+  });
+
+  coverLetters.forEach((letter) => {
+    items.push({
+      id: `cover-${letter.id}`,
+      title: `${letter.company} 맞춤 자소서 저장`,
+      desc: "지원 동기와 프로젝트 경험 초안이 저장되었습니다.",
+      meta: letter.savedAt ? formatDate(letter.savedAt) : "맞춤 자소서",
+      timestamp: getTimestamp(letter.savedAt) || 2,
+    });
+  });
+
+  interviewResults.forEach((result) => {
+    items.push({
+      id: `interview-${result.id || result.company}-${result.createdAt}`,
+      title: `${result.company || "기업"} 면접 리포트 생성`,
+      desc: `${result.role || "면접"} · 종합 ${result.score ?? 0}점`,
+      meta: formatDate(result.createdAt),
+      timestamp: getTimestamp(result.createdAt) || 1,
+    });
+  });
+
+  return items.sort((a, b) => b.timestamp - a.timestamp).slice(0, 4);
+}
+
+function getScoreTone(score) {
+  if (score >= 80) return "양호";
+  if (score >= 60) return "보완 권장";
+  if (score >= 40) return "진행 중";
+  return "우선 보완";
+}
+
 export default function Home() {
   const [favoriteCount, setFavoriteCount] = useState(0);
   const [showBanner, setShowBanner] = useState(false);
@@ -77,6 +179,9 @@ export default function Home() {
     getLatestInterviewSummary()
   );
   const [techStacks, setTechStacks] = useState(() => getTechStacks());
+  const [recentActivities, setRecentActivities] = useState(() =>
+    buildRecentActivities()
+  );
 
   const progress = careerScores.resume;
   const overall = careerScores.overall;
@@ -96,28 +201,45 @@ export default function Home() {
     }));
   }, [favoriteCompanies]);
 
-  const profileStatusCards = useMemo(() => {
-    return [
-      [
-        "기본 정보",
-        progress >= 70 ? "완료" : progress >= 30 ? "진행 중" : "보완 필요",
-      ],
-      [
-        "자소서",
-        careerScores.coverLetter > 0
-          ? `${careerScores.coverLetter}%`
-          : "생성 필요",
-      ],
-      [
-        "기술 스택",
-        careerScores.tech >= 40
-          ? "양호"
-          : careerScores.tech > 0
-          ? "진행 중"
-          : "미입력",
-      ],
-    ];
-  }, [progress, careerScores.coverLetter, careerScores.tech]);
+  const todayStatusCards = useMemo(
+    () => [
+      {
+        label: "프로필 완성도",
+        value: `${careerScores.resume}%`,
+        desc: getScoreTone(careerScores.resume),
+        path: "/resume",
+      },
+      {
+        label: "종합 준비도",
+        value: `${careerScores.overall}%`,
+        desc: readinessStatus,
+        path: "/growth",
+      },
+      {
+        label: "찜한 기업",
+        value: `${favoriteCount}개`,
+        desc: favoriteCount > 0 ? "지원 후보 있음" : "관심 기업 필요",
+        path: "/fitting",
+      },
+      {
+        label: "최근 면접",
+        value: latestInterview.value,
+        desc: latestInterview.desc,
+        path: "/interview",
+      },
+    ],
+    [careerScores, favoriteCount, latestInterview, readinessStatus]
+  );
+
+  const scoreBreakdown = useMemo(
+    () => [
+      ["이력서", careerScores.resume, "/resume"],
+      ["자소서", careerScores.coverLetter, "/fitting"],
+      ["면접", careerScores.interview, "/interview"],
+      ["기술", careerScores.tech, "/resume"],
+    ],
+    [careerScores]
+  );
 
   const refreshHomeData = () => {
     const nextScores = getCareerScores();
@@ -129,6 +251,7 @@ export default function Home() {
     setFavoriteCount(favorites.length);
     setLatestInterview(getLatestInterviewSummary());
     setTechStacks(getTechStacks());
+    setRecentActivities(buildRecentActivities());
 
     const submitted =
       localStorage.getItem("articlue_resume_submitted") === "true";
@@ -147,12 +270,20 @@ export default function Home() {
       refreshHomeData();
     };
 
+    const handleCareerScoreChanged = () => {
+      refreshHomeData();
+    };
+
     window.addEventListener("focus", handleFocus);
     window.addEventListener("storage", handleStorage);
+    window.addEventListener("careerScoreChanged", handleCareerScoreChanged);
+    window.addEventListener("articlue:career-score-changed", handleCareerScoreChanged);
 
     return () => {
       window.removeEventListener("focus", handleFocus);
       window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("careerScoreChanged", handleCareerScoreChanged);
+      window.removeEventListener("articlue:career-score-changed", handleCareerScoreChanged);
     };
   }, []);
 
@@ -202,44 +333,42 @@ export default function Home() {
         </div>
       )}
 
-      <section className="relative mb-[22px] grid grid-cols-[minmax(0,1fr)_220px] items-center gap-8 overflow-hidden rounded-[30px] bg-gradient-to-br from-[#1e3a8a] via-[#2563eb] to-[#60a5fa] p-[34px] text-white shadow-[0_18px_55px_rgba(37,99,235,0.12)]">
+      <section className="relative mb-[22px] grid grid-cols-[minmax(0,1fr)_240px] items-center gap-8 overflow-hidden rounded-[30px] bg-gradient-to-br from-[#1e3a8a] via-[#2563eb] to-[#60a5fa] p-[34px] text-white shadow-[0_18px_55px_rgba(37,99,235,0.12)]">
         <div className="relative z-10">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/15 px-3 py-2 text-[13px] font-black">
             <span className="h-2 w-2 rounded-full bg-green-400" />
-            AI 기반 커리어 매칭
+            오늘의 커리어 대시보드
           </div>
 
           <h2 className="mb-[14px] text-[31px] font-extrabold leading-[1.36] tracking-[-0.15px]">
-            <span className="block">오늘 기준으로</span>
-            <span className="block">지원 가능성이 높은</span>
-            <span className="block">기업을 확인해보세요</span>
+            <span className="block">내 지원 준비 상태와</span>
+            <span className="block">오늘 해야 할 액션을</span>
+            <span className="block">한눈에 확인하세요</span>
           </h2>
 
-          <p className="mb-6 max-w-[560px] text-[15px] leading-[1.78] opacity-95">
-            이력서 완성도와 기술 경험을 바탕으로 맞춤 기업을 추천하고,
-            자소서와 실전 면접 준비까지 한 흐름으로 이어줍니다.
+          <p className="mb-6 max-w-[590px] text-[15px] leading-[1.78] opacity-95">
+            이력서, 자소서, 면접, 기술스택 데이터를 연결해 현재 준비도와
+            다음 행동, 추천 기업을 하나의 흐름으로 정리합니다.
           </p>
 
           <div className="flex flex-wrap gap-[10px]">
             <Link
-              to="/fitting"
-              onClick={markRecommendationViewed}
+              to={nextAction.path}
               className="inline-flex items-center justify-center rounded-full bg-white px-[19px] py-3 text-[14px] font-black text-blue-700 transition hover:-translate-y-0.5"
             >
-              오늘의 추천 기업 확인하기
+              {nextAction.label}
             </Link>
 
             <Link
-              to="/resume"
-              onClick={continueResume}
+              to="/growth"
               className="inline-flex items-center justify-center rounded-full border border-white/60 px-[19px] py-3 text-[14px] font-black text-white transition hover:-translate-y-0.5"
             >
-              이력서 완성도 높이기
+              성장 리포트 보기
             </Link>
           </div>
         </div>
 
-        <div className="relative z-10 w-[220px] rounded-[24px] border border-white/25 bg-white/15 p-5 backdrop-blur-xl">
+        <div className="relative z-10 w-[240px] rounded-[24px] border border-white/25 bg-white/15 p-5 backdrop-blur-xl">
           <div className="mb-3 text-[14px] font-black opacity-90">
             현재 추천 준비도
           </div>
@@ -262,62 +391,84 @@ export default function Home() {
 
           <p className="text-[13px] font-medium leading-[1.72] opacity-90">
             이력서 {careerScores.resume}%, 자소서 {careerScores.coverLetter}%,
-            면접 {careerScores.interview}%, 기술 {careerScores.tech}% 기준으로
-            계산된 준비도입니다.
+            면접 {careerScores.interview}%, 기술 {careerScores.tech}% 기준입니다.
           </p>
         </div>
 
         <div className="absolute -right-20 -top-24 h-[280px] w-[280px] rounded-full bg-white/15" />
       </section>
 
-      <section className="mb-[22px] grid grid-cols-[1fr_1.35fr] gap-[22px]">
-        <article className="flex flex-col items-center gap-[18px] rounded-[26px] border border-slate-200 bg-white p-6 text-center shadow-[0_10px_30px_rgba(15,23,42,0.07)] transition-colors dark:border-slate-700 dark:bg-slate-900">
-          <div className="max-w-[280px]">
-            <h3 className="mb-[7px] text-[20px] font-black tracking-[-0.4px] text-slate-900 dark:text-white">
-              추천 정확도
-            </h3>
-            <p className="text-[14px] font-bold leading-[1.6] text-slate-600 dark:text-slate-300">
-              이력서, 자소서, 면접, 기술스택을 함께 반영한 현재 준비도입니다.
-            </p>
-          </div>
-
-          <div
-            className="relative flex h-[156px] w-[156px] items-center justify-center rounded-full"
-            style={{
-              background: `conic-gradient(#2563eb 0 ${overall}%, #f1f5f9 ${overall}% 100%)`,
-            }}
+      <section className="mb-[22px] grid grid-cols-4 gap-4">
+        {todayStatusCards.map((card) => (
+          <Link
+            key={card.label}
+            to={card.path}
+            className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.07)] transition hover:-translate-y-0.5 hover:border-blue-100 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-blue-800"
           >
-            <div className="absolute h-[116px] w-[116px] rounded-full bg-white dark:bg-slate-900" />
-            <div className="relative z-10 text-center">
-              <strong className="block text-[34px] font-black text-blue-700 dark:text-blue-300">
-                {overall}%
-              </strong>
-              <span className="text-[12px] font-black text-slate-400">
-                종합 준비도
-              </span>
+            <span className="mb-3 block text-[13px] font-black text-slate-600 dark:text-slate-300">
+              {card.label}
+            </span>
+            <strong className="block truncate text-[25px] font-black text-slate-900 dark:text-white">
+              {card.value}
+            </strong>
+            <p className="mt-2 line-clamp-2 text-[12px] font-bold leading-[1.55] text-slate-400 dark:text-slate-500">
+              {card.desc}
+            </p>
+          </Link>
+        ))}
+      </section>
+
+      <section className="mb-[22px] grid grid-cols-[.9fr_1.1fr] gap-[22px]">
+        <article className="rounded-[26px] border border-slate-200 bg-white p-6 shadow-[0_10px_30px_rgba(15,23,42,0.07)] transition-colors dark:border-slate-700 dark:bg-slate-900">
+          <div className="mb-[18px] flex items-start justify-between gap-4">
+            <div>
+              <p className="mb-2 text-[13px] font-black text-blue-700 dark:text-blue-300">
+                오늘 해야 할 액션
+              </p>
+              <h3 className="text-[22px] font-black tracking-[-0.5px] text-slate-900 dark:text-white">
+                {nextAction.title}
+              </h3>
             </div>
+            <span className="rounded-full bg-blue-50 px-3 py-2 text-[12px] font-black text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+              우선순위
+            </span>
           </div>
 
-          <div className="flex w-full items-center justify-center gap-2 rounded-[18px] bg-blue-50 px-[14px] py-[13px] text-[13px] font-black text-blue-800 dark:bg-blue-950 dark:text-blue-300">
-            <span className="h-2 w-2 rounded-full bg-blue-600" />
-            {nextAction.title}
-          </div>
+          <p className="mb-[18px] break-keep text-[14px] font-bold leading-[1.7] text-slate-600 dark:text-slate-300">
+            {nextAction.description}
+          </p>
 
-          <div className="grid w-full grid-cols-3 gap-2">
-            {profileStatusCards.map(([label, value]) => (
-              <div
+          <div className="mb-[18px] grid grid-cols-2 gap-3">
+            {scoreBreakdown.map(([label, score, path]) => (
+              <Link
                 key={label}
-                className="flex min-h-[72px] flex-col items-center justify-center gap-[5px] rounded-2xl bg-slate-100 px-2 py-3 dark:bg-slate-800"
+                to={path}
+                className="rounded-[18px] border border-slate-200 bg-slate-100 p-4 dark:border-slate-700 dark:bg-slate-800"
               >
-                <span className="whitespace-nowrap text-[12px] font-extrabold text-slate-600 dark:text-slate-300">
-                  {label}
-                </span>
-                <strong className="whitespace-nowrap text-[12px] font-black text-slate-900 dark:text-white">
-                  {value}
-                </strong>
-              </div>
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <span className="text-[12px] font-black text-slate-600 dark:text-slate-300">
+                    {label}
+                  </span>
+                  <strong className="text-[13px] font-black text-slate-900 dark:text-white">
+                    {score}%
+                  </strong>
+                </div>
+                <div className="h-[8px] overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-blue-600 to-emerald-500"
+                    style={{ width: `${score}%` }}
+                  />
+                </div>
+              </Link>
             ))}
           </div>
+
+          <Link
+            to={nextAction.path}
+            className="inline-flex rounded-full bg-blue-600 px-[18px] py-3 text-[14px] font-black text-white transition hover:-translate-y-0.5 hover:bg-blue-700"
+          >
+            {nextAction.label}
+          </Link>
         </article>
 
         <article className="rounded-[26px] border border-slate-200 bg-white p-6 shadow-[0_10px_30px_rgba(15,23,42,0.07)] transition-colors dark:border-slate-700 dark:bg-slate-900">
@@ -333,6 +484,7 @@ export default function Home() {
 
             <Link
               to="/fitting"
+              onClick={markRecommendationViewed}
               className="text-[13px] font-black text-blue-700 dark:text-blue-300"
             >
               전체 보기 →
@@ -383,69 +535,99 @@ export default function Home() {
         </article>
       </section>
 
-      <section className="grid grid-cols-4 gap-4">
-        {[
-          ["1", "이력서 작성", "기술 경험과 프로젝트 성과를 구조화합니다.", "작성하러 가기 →", "/resume"],
-          ["2", "기업 추천", "JD와 포트폴리오를 비교해 적합 기업을 찾습니다.", "추천 보기 →", "/fitting"],
-          ["3", "자소서 변환", "기술 중심 문장을 기업 관점의 성과 언어로 정리합니다.", "변환하기 →", "/fitting"],
-          ["4", "AI 면접 시뮬레이션", "추천 기업 기준으로 꼬리 질문과 답변 방향을 제공합니다.", "연습하기 →", "/interview"],
-        ].map(([num, title, desc, linkText, path]) => (
-          <article
-            key={num}
-            className="rounded-[22px] border border-slate-200 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.07)] transition hover:-translate-y-0.5 hover:border-blue-100 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-blue-800"
-          >
-            <div className="mb-[14px] flex h-[30px] w-[30px] items-center justify-center rounded-xl bg-blue-50 text-[13px] font-black text-blue-800 dark:bg-blue-950 dark:text-blue-300">
-              {num}
+      <section className="mb-[22px] grid grid-cols-[1fr_.85fr] gap-[22px]">
+        <article className="rounded-[26px] border border-slate-200 bg-white p-6 shadow-[0_10px_30px_rgba(15,23,42,0.07)] transition-colors dark:border-slate-700 dark:bg-slate-900">
+          <div className="mb-[18px] flex items-start justify-between gap-4">
+            <div>
+              <h3 className="mb-[7px] text-[20px] font-black tracking-[-0.4px] text-slate-900 dark:text-white">
+                최근 활동
+              </h3>
+              <p className="text-[14px] font-bold leading-[1.6] text-slate-600 dark:text-slate-300">
+                이력서, 자소서, 면접, 찜한 기업 기록을 최신 상태로 정리합니다.
+              </p>
             </div>
-            <h4 className="mb-2 text-[16px] font-black text-slate-900 dark:text-white">
-              {title}
-            </h4>
-            <p className="mb-[15px] text-[13px] font-bold leading-[1.65] text-slate-600 dark:text-slate-300">
-              {desc}
-            </p>
             <Link
-              to={path}
+              to="/mypage"
               className="text-[13px] font-black text-blue-700 dark:text-blue-300"
             >
-              {linkText}
+              관리하기 →
             </Link>
-          </article>
-        ))}
-      </section>
+          </div>
 
-      <section className="mt-[22px] grid grid-cols-3 gap-[18px]">
-        {[
-          [
-            "찜한 기업 공고",
-            `${favoriteCount}개`,
-            "관심 기업은 내 커리어 관리에서 다시 확인할 수 있습니다.",
-          ],
-          [
-            "최근 면접 준비",
-            latestInterview.value,
-            latestInterview.desc,
-          ],
-          [
-            "다음 추천 액션",
-            nextAction.label,
-            nextAction.description,
-          ],
-        ].map(([label, value, desc]) => (
-          <article
-            key={label}
-            className="rounded-[22px] border border-slate-200 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.07)] transition-colors dark:border-slate-700 dark:bg-slate-900"
-          >
-            <span className="mb-2 block text-[13px] font-black text-slate-600 dark:text-slate-300">
-              {label}
-            </span>
-            <strong className="text-[25px] font-black text-slate-900 dark:text-white">
-              {value}
-            </strong>
-            <p className="mt-2 line-clamp-2 text-[12px] font-bold leading-[1.55] text-slate-400 dark:text-slate-500">
-              {desc}
-            </p>
-          </article>
-        ))}
+          {recentActivities.length > 0 ? (
+            <div className="grid gap-3">
+              {recentActivities.map((activity, index) => (
+                <div
+                  key={activity.id}
+                  className="grid grid-cols-[36px_1fr] gap-3 rounded-[18px] border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800"
+                >
+                  <div className="flex h-9 w-9 items-center justify-center rounded-[14px] bg-blue-50 text-[13px] font-black text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                    {index + 1}
+                  </div>
+                  <div>
+                    <div className="mb-1 text-[14px] font-black text-slate-900 dark:text-white">
+                      {activity.title}
+                    </div>
+                    <p className="line-clamp-1 text-[12px] font-bold text-slate-600 dark:text-slate-300">
+                      {activity.desc}
+                    </p>
+                    <span className="mt-1 block text-[11px] font-black text-slate-400 dark:text-slate-500">
+                      {activity.meta}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-[22px] border border-dashed border-slate-200 bg-slate-100 p-7 text-center text-[14px] font-extrabold leading-[1.7] text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+              아직 표시할 활동이 없습니다.
+              <br />
+              이력서 작성, 기업 찜, 자소서 생성, 면접 연습을 진행하면 이곳에 표시됩니다.
+            </div>
+          )}
+        </article>
+
+        <article className="rounded-[26px] border border-blue-100 bg-gradient-to-b from-blue-50 to-white p-6 shadow-[0_10px_30px_rgba(15,23,42,0.07)] dark:border-slate-700 dark:from-slate-900 dark:to-slate-800">
+          <div className="mb-4 inline-flex rounded-full bg-blue-100 px-3 py-2 text-[12px] font-black text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+            지원 준비 흐름
+          </div>
+          <h3 className="mb-3 text-[22px] font-black tracking-[-0.5px] text-slate-900 dark:text-white">
+            다음 단계까지 연결하세요.
+          </h3>
+          <p className="mb-[18px] break-keep text-[14px] font-bold leading-[1.7] text-slate-600 dark:text-slate-300">
+            현재 상태를 확인한 뒤 추천 기업, 자소서, 면접 준비까지 같은 흐름으로 이어가면 시연 완성도가 높아집니다.
+          </p>
+
+          <div className="grid gap-3">
+            {[
+              ["01", "프로필 작성", "기본 정보와 프로젝트 경험 입력", "/resume"],
+              ["02", "기업 추천", "JD와 프로필 기반 추천 기업 확인", "/fitting"],
+              ["03", "자소서 생성", "기업별 맞춤 지원 문장 정리", "/fitting"],
+              ["04", "면접 연습", "추천 기업 기준 실전 질문 연습", "/interview"],
+            ].map(([num, title, desc, path]) => (
+              <Link
+                key={num}
+                to={path}
+                className="grid grid-cols-[42px_1fr_auto] items-center gap-3 rounded-[18px] border border-blue-100 bg-white p-4 dark:border-slate-700 dark:bg-slate-900"
+              >
+                <span className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-blue-50 text-[12px] font-black text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                  {num}
+                </span>
+                <span>
+                  <strong className="block text-[14px] font-black text-slate-900 dark:text-white">
+                    {title}
+                  </strong>
+                  <span className="mt-1 block text-[12px] font-bold text-slate-500 dark:text-slate-400">
+                    {desc}
+                  </span>
+                </span>
+                <span className="text-[18px] font-black text-blue-700 dark:text-blue-300">
+                  ›
+                </span>
+              </Link>
+            ))}
+          </div>
+        </article>
       </section>
     </AppLayout>
   );

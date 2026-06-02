@@ -2,6 +2,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 
 const INTERVIEW_RESULT_KEY = "articlue_interview_results";
+const THEME_KEY = "articlue-theme";
 
 const companyOptions = [
   "네이버웹툰 - Backend",
@@ -39,19 +40,11 @@ export default function Interview() {
 
   useEffect(() => {
     const syncDarkMode = () => {
-      const htmlHasDark = document.documentElement.classList.contains("dark");
-      const bodyHasDark = document.body.classList.contains("dark");
-      const savedTheme =
-        localStorage.getItem("articlue_theme") ||
-        localStorage.getItem("theme") ||
-        localStorage.getItem("articlue_dark_mode");
+      const savedTheme = localStorage.getItem(THEME_KEY) || "light";
+      const shouldUseDarkMode = savedTheme === "dark";
 
-      setIsDarkMode(
-        htmlHasDark ||
-          bodyHasDark ||
-          savedTheme === "dark" ||
-          savedTheme === "true"
-      );
+      document.documentElement.classList.toggle("dark", shouldUseDarkMode);
+      setIsDarkMode(shouldUseDarkMode);
     };
 
     syncDarkMode();
@@ -61,16 +54,14 @@ export default function Interview() {
       attributes: true,
       attributeFilter: ["class"],
     });
-    observer.observe(document.body, {
-      attributes: true,
-      attributeFilter: ["class"],
-    });
 
     window.addEventListener("storage", syncDarkMode);
+    window.addEventListener("focus", syncDarkMode);
 
     return () => {
       observer.disconnect();
       window.removeEventListener("storage", syncDarkMode);
+      window.removeEventListener("focus", syncDarkMode);
     };
   }, []);
 
