@@ -208,9 +208,9 @@ function Section({ id, title, description, action, children }) {
   return (
     <section
       id={id}
-      className="mb-6 rounded-[24px] border border-slate-200 bg-white p-7 shadow-[0_8px_24px_rgba(15,23,42,0.06)] transition-colors dark:border-slate-700 dark:bg-slate-900"
+      className="mb-5 scroll-mt-[96px] rounded-[24px] border border-slate-200 bg-white p-6 shadow-[0_8px_24px_rgba(15,23,42,0.06)] transition-colors dark:border-slate-700 dark:bg-slate-900"
     >
-      <div className="mb-[22px] flex items-start justify-between gap-4">
+      <div className="mb-[18px] flex items-start justify-between gap-4">
         <div>
           <h2 className="mb-[7px] text-[20px] font-black tracking-[-0.4px] text-slate-900 dark:text-white">
             {title}
@@ -467,6 +467,7 @@ export default function Resume() {
       window.removeEventListener("storage", handleStorage);
     };
   }, []);
+
 
   const progress = useMemo(() => {
     const basicRatio = getSectionRatio([
@@ -765,7 +766,7 @@ export default function Resume() {
 
   return (
     <AppLayout title="커리어 프로필 작성">
-      <div className="mb-6 rounded-[24px] border border-slate-200 bg-white p-6 shadow-[0_8px_24px_rgba(15,23,42,0.06)] transition-colors dark:border-slate-700 dark:bg-slate-900">
+      <div className="mb-5 rounded-[24px] border border-slate-200 bg-white px-5 py-4 shadow-[0_8px_24px_rgba(15,23,42,0.06)] transition-colors dark:border-slate-700 dark:bg-slate-900">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="min-w-[320px] flex-1">
             <div className="mb-[7px] text-[13px] font-black text-emerald-600">
@@ -785,7 +786,7 @@ export default function Resume() {
         </div>
       </div>
 
-      <div className="mb-[26px]">
+      <div className="mb-[22px]">
         <h1 className="mb-[10px] text-[30px] font-black tracking-[-0.7px] text-slate-900 dark:text-white">
           커리어 프로필 작성
         </h1>
@@ -795,12 +796,13 @@ export default function Resume() {
         </p>
       </div>
 
+      <div>
       <Section
         id="section-basic"
         title="1. 기본 정보 및 프로필 연동"
         description="GitHub를 연동하면 주요 기술 스택을 자동 파싱할 수 있습니다."
       >
-        <div className="mb-5 flex items-center justify-between gap-4 rounded-[22px] bg-slate-100 p-[18px] dark:bg-slate-800">
+        <div className="mb-4 flex items-center justify-between gap-4 rounded-[22px] bg-slate-100 px-5 py-4 dark:bg-slate-800">
           <div>
             <strong className="mb-[5px] block font-black text-slate-900 dark:text-white">
               GitHub 계정 연동
@@ -856,7 +858,7 @@ export default function Resume() {
           </Field>
         </div>
 
-        <div className="mb-6 rounded-[24px] border border-blue-100 bg-blue-50/70 p-5 dark:border-blue-900 dark:bg-blue-950/30">
+        <div className="mb-5 rounded-[24px] border border-blue-100 bg-blue-50/70 p-4 dark:border-blue-900 dark:bg-blue-950/30">
           <div className="mb-4 flex items-start justify-between gap-4">
             <div>
               <div className="mb-2 inline-flex rounded-full bg-white px-3 py-2 text-[12px] font-black text-blue-700 dark:bg-slate-900 dark:text-blue-300">
@@ -875,7 +877,7 @@ export default function Resume() {
             </button>
           </div>
 
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             {[
               ["이름", form.name],
               ["닉네임", userProfile?.nickname],
@@ -890,7 +892,7 @@ export default function Resume() {
             ].map(([label, value]) => (
               <div
                 key={label}
-                className="min-h-[82px] rounded-[18px] border border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900"
+                className="min-h-[70px] rounded-[18px] border border-slate-200 bg-white px-3 py-3 dark:border-slate-700 dark:bg-slate-900"
               >
                 <span className="mb-2 block text-[12px] font-black text-slate-500 dark:text-slate-400">
                   {label}
@@ -1142,6 +1144,7 @@ export default function Resume() {
       </Section>
 
       <Section
+        id="section-portfolio"
         title="5. 포트폴리오 문서 첨부"
         description=".pdf, .txt 파일만 지원합니다. 최대 50MB까지 업로드할 수 있습니다."
       >
@@ -1422,6 +1425,7 @@ export default function Resume() {
           </div>
         ))}
       </Section>
+      </div>
 
       <div className="fixed bottom-0 left-0 right-0 z-50 flex h-[84px] items-center justify-center border-t border-slate-200 bg-white/90 backdrop-blur-xl dark:border-slate-700 dark:bg-slate-950/90">
         <div className="flex w-full max-w-[1120px] items-center justify-between gap-4 px-10">

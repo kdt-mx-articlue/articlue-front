@@ -11,9 +11,16 @@ import {
   notifyCareerScoreChanged,
   readJson,
 } from "../utils/careerScore.js";
+import {
+  parseCoverLetterData,
+  parseFavoriteJobData,
+  parseInterviewData,
+  parseResumeData,
+} from "../utils/dataParserClient.js";
 
 const INTERVIEW_RESULT_KEY = "articlue_interview_results";
 const COVER_LETTER_KEY = "articlue_cover_letters";
+const RESUME_DRAFT_KEY = "articlue_resume_draft";
 const USER_PROFILE_KEY = "articlue_user_profile";
 const PROFILE_NAME_KEY = "articlue_profile_name";
 
@@ -258,6 +265,8 @@ export default function MyPage() {
   const [userProfile, setUserProfile] = useState(() => readUserProfile());
   const [profileDraft, setProfileDraft] = useState(() => readUserProfile());
   const [profileEditing, setProfileEditing] = useState(false);
+  const [parserSummary, setParserSummary] = useState(null);
+  const [parserLoading, setParserLoading] = useState(false);
 
   const progress = careerScores.resume;
   const matchScore = careerScores.overall;
@@ -344,6 +353,33 @@ export default function MyPage() {
     }
   };
 
+  const refreshParserSummary = async () => {
+    setParserLoading(true);
+
+    try {
+      const [resumeResult, coverLetterResult, interviewResult, favoriteResult] =
+        await Promise.all([
+          parseResumeData(readJson(RESUME_DRAFT_KEY, {})),
+          parseCoverLetterData(readJson(COVER_LETTER_KEY, {})),
+          parseInterviewData(readJson(INTERVIEW_RESULT_KEY, [])),
+          parseFavoriteJobData(readFavoriteJobs()),
+        ]);
+
+      setParserSummary({
+        resume: resumeResult,
+        coverLetters: coverLetterResult,
+        interviews: interviewResult,
+        favorites: favoriteResult,
+        parsedAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error("Data parser summary failed:", error);
+      setParserSummary(null);
+    } finally {
+      setParserLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!isAuthenticated()) {
       navigate("/login", { replace: true });
@@ -352,6 +388,7 @@ export default function MyPage() {
 
     setAuthChecked(true);
     refreshPageData();
+    refreshParserSummary();
 
     const savedTheme = localStorage.getItem("articlue-theme") || "light";
     setTheme(savedTheme);
@@ -391,6 +428,7 @@ export default function MyPage() {
       }
 
       refreshPageData();
+      refreshParserSummary();
     };
 
     window.addEventListener("storage", handleStorage);
@@ -557,6 +595,7 @@ export default function MyPage() {
     setProfileDraft(nextProfile);
     setProfileEditing(false);
     notifyCareerScoreChanged();
+    refreshParserSummary();
     showToast("프로필 정보가 저장되었습니다.");
   };
 
@@ -1182,6 +1221,64 @@ export default function MyPage() {
             <p className="text-[14px] text-slate-600 dark:text-slate-300">
               생성한 이력서, 면접 리포트, 성장 진단 리포트를 한곳에서 관리합니다.
             </p>
+          </div>
+
+          <div className="mb-5 rounded-[22px] border border-blue-100 bg-blue-50/70 p-4 dark:border-blue-900 dark:bg-blue-950/30">
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div>
+                <span className="mb-2 inline-flex rounded-full bg-white px-3 py-2 text-[12px] font-black text-blue-700 dark:bg-slate-900 dark:text-blue-300">
+                  Web Worker Parser
+                </span>
+                <h3 className="text-[17px] font-black text-slate-900 dark:text-white">
+                  클라이언트 사이드 데이터 파싱 상태
+                </h3>
+                <p className="mt-1 break-keep text-[13px] font-extrabold leading-[1.6] text-slate-600 dark:text-slate-300">
+                  이력서, 맞춤 자소서, 면접 리포트, 찜한 기업 데이터를 별도 Worker에서 분석합니다.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={refreshParserSummary}
+                className="shrink-0 rounded-full border border-blue-600 bg-white px-4 py-2 text-[12px] font-black text-blue-700 transition hover:bg-blue-50 dark:bg-slate-900 dark:text-blue-300 dark:hover:bg-blue-950"
+              >
+                다시 분석
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              {[
+                ["이력서 키워드", parserSummary?.resume?.keywords?.length || 0],
+                ["자소서", parserSummary?.coverLetters?.summary?.count || 0],
+                ["면접 리포트", parserSummary?.interviews?.summary?.count || 0],
+                ["찜한 기업", parserSummary?.favorites?.summary?.count || 0],
+              ].map(([label, value]) => (
+                <div
+                  key={label}
+                  className="rounded-[18px] border border-blue-100 bg-white px-4 py-3 dark:border-blue-900 dark:bg-slate-900"
+                >
+                  <span className="mb-1 block text-[12px] font-black text-slate-500 dark:text-slate-400">
+                    {label}
+                  </span>
+                  <strong className="text-[22px] font-black text-blue-700 dark:text-blue-300">
+                    {parserLoading ? "..." : value}
+                  </strong>
+                </div>
+              ))}
+            </div>
+
+            {parserSummary?.resume?.keywords?.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {parserSummary.resume.keywords.slice(0, 8).map((item) => (
+                  <span
+                    key={item.keyword}
+                    className="rounded-full bg-white px-3 py-2 text-[12px] font-black text-slate-600 dark:bg-slate-900 dark:text-slate-300"
+                  >
+                    {item.keyword} · {item.count}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="mb-4 flex flex-wrap gap-2">

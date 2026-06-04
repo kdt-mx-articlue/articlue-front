@@ -389,11 +389,11 @@ export default function Growth() {
       <section className="relative mb-[22px] grid grid-cols-[1.25fr_.75fr] items-center gap-7 overflow-hidden rounded-[30px] bg-gradient-to-br from-[#1e3a8a] via-[#2563eb] to-[#60a5fa] p-[34px] text-white shadow-[0_18px_55px_rgba(37,99,235,0.12)]">
         <div className="relative z-10">
           <h2 className="mb-3 mt-[6px] break-keep text-[32px] font-black leading-[1.25] tracking-[-1px]">
-            내 포트폴리오의 약점을 진단하고 합격 가능성을 높일 성장 루트를 확인하세요.
+            내 커리어 프로필의 약점을 진단하고 합격 가능성을 높일 성장 루트를 확인하세요.
           </h2>
 
           <p className="max-w-[670px] break-keep text-[15px] leading-[1.75] opacity-95">
-            기술 스택과 프로젝트 경험을 기업 JD 기준으로 다시 해석해, 부족한
+            기술 스택과 프로젝트 경험을 기업 직무 기준으로 다시 해석해, 부족한
             역량·보완 이유·다음 액션을 한 화면에서 정리합니다.
           </p>
 

@@ -190,8 +190,8 @@ export default function Fitting() {
       localStorage.setItem(FAVORITE_KEY, JSON.stringify(next));
       showToast(
         exists
-          ? "찜한 공고에서 삭제되었습니다."
-          : "내 커리어 관리에 공고를 저장했습니다."
+          ? "관심 기업이 삭제되었습니다."
+          : "관심 기업이 저장되었습니다."
       );
 
       return next;
@@ -218,7 +218,7 @@ export default function Fitting() {
     );
 
     setEssayModal(company);
-    showToast("AI 맞춤 자소서 생성이 완료되었습니다.");
+    showToast("맞춤 자소서가 저장되었습니다.");
   };
 
   const goInterview = (company) => {
@@ -557,7 +557,7 @@ export default function Fitting() {
               <button
                 type="button"
                 onClick={() =>
-                  showToast("자소서가 내 커리어 관리에 저장되었습니다.")
+                  showToast("맞춤 자소서가 저장되었습니다.")
                 }
                 className="rounded-full bg-blue-600 px-[18px] py-3 text-[14px] font-black text-white transition-colors hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
               >
