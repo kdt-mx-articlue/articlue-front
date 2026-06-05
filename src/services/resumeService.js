@@ -133,55 +133,6 @@ export async function ensureActiveResume(draft = {}) {
   }
 }
 
-
-function hasMeaningfulDraftValue(value) {
-  if (Array.isArray(value)) return value.length > 0;
-  if (value && typeof value === "object") {
-    return Object.values(value).some(hasMeaningfulDraftValue);
-  }
-  return String(value || "").trim().length > 0;
-}
-
-function mergeFormFieldSafely(apiForm = {}, fallbackForm = {}) {
-  const keys = new Set([
-    ...Object.keys(fallbackForm || {}),
-    ...Object.keys(apiForm || {}),
-  ]);
-
-  return Array.from(keys).reduce((merged, key) => {
-    const apiValue = apiForm?.[key];
-    const fallbackValue = fallbackForm?.[key];
-
-    if (typeof apiValue === "boolean") {
-      merged[key] = apiValue || Boolean(fallbackValue);
-      return merged;
-    }
-
-    merged[key] = hasMeaningfulDraftValue(apiValue) ? apiValue : fallbackValue || "";
-    return merged;
-  }, {});
-}
-
-function mergeDraftSafely(apiDraft = {}, fallbackDraft = {}) {
-  const safeForm = mergeFormFieldSafely(apiDraft.form || {}, fallbackDraft.form || {});
-
-  return {
-    ...fallbackDraft,
-    ...apiDraft,
-    form: safeForm,
-    techStacks: apiDraft.techStacks?.length ? apiDraft.techStacks : fallbackDraft.techStacks || [],
-    experiences: apiDraft.experiences?.length ? apiDraft.experiences : fallbackDraft.experiences || [],
-    essays: apiDraft.essays?.length ? apiDraft.essays : fallbackDraft.essays || [],
-    certificates: apiDraft.certificates?.length ? apiDraft.certificates : fallbackDraft.certificates || [],
-    careers: apiDraft.careers?.length ? apiDraft.careers : fallbackDraft.careers || [],
-    files: apiDraft.files?.length ? apiDraft.files : fallbackDraft.files || [],
-    github: {
-      ...(fallbackDraft.github || {}),
-      ...(apiDraft.github || {}),
-    },
-  };
-}
-
 export async function syncResumeDraftFromApi(fallback = {}) {
   try {
     const resumeId = await ensureActiveResume(fallback);
@@ -192,12 +143,10 @@ export async function syncResumeDraftFromApi(fallback = {}) {
 
     const response = await getResume(resumeId);
     const normalized = normalizeResumeData(response, fallback);
-    const localDraft = getResumeDraft(fallback);
-    const mergedDraft = mergeDraftSafely(normalized, localDraft);
 
-    saveResumeDraft(mergedDraft);
+    saveResumeDraft(normalized);
 
-    return mergedDraft;
+    return normalized;
   } catch (error) {
     console.warn("이력서 API 조회 실패. localStorage draft를 사용합니다.", error);
     return getResumeDraft(fallback);

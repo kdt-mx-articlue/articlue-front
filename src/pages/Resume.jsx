@@ -4,6 +4,7 @@ import AppLayout from "../components/AppLayout.jsx";
 import { notifyCareerScoreChanged } from "../utils/careerScore.js";
 import {
   ensureActiveResume,
+  getActiveResumeId,
   getGithubConnection,
   getResumeDraft,
   getTechStacks as getSavedTechStacks,
@@ -11,10 +12,8 @@ import {
   markResumeSubmitted,
   saveGithubConnection as saveGithubConnectionToService,
   saveResumeDraft,
-  saveResumeDraftToApi,
   saveResumeProgress,
   saveTechStacks,
-  syncResumeDraftFromApi,
 } from "../services/resumeService.js";
 import {
   getUserProfile,
@@ -512,425 +511,6 @@ function mergeResumeDraftWithBackup(serviceDraft, backupDraft) {
   };
 }
 
-function normalizeApiDraft(apiDraft) {
-  if (!apiDraft || typeof apiDraft !== "object") return null;
-
-  const draft = apiDraft.draft || apiDraft.data || apiDraft;
-
-  if (!draft || typeof draft !== "object") return null;
-
-  return {
-    form: draft.form || null,
-    techStacks: sanitizeTechStacks(draft.techStacks || draft.tech_stacks || []),
-    experiences: Array.isArray(draft.experiences) ? draft.experiences : null,
-    essays: Array.isArray(draft.essays) ? draft.essays : null,
-    certificates: Array.isArray(draft.certificates) ? draft.certificates : null,
-    careers: Array.isArray(draft.careers) ? draft.careers : null,
-    files: Array.isArray(draft.files) ? draft.files : null,
-    github: draft.github || draft.githubConnection || null,
-  };
-}
-
-
-function pickApiFunction(module, names) {
-  for (const name of names) {
-    if (typeof module?.[name] === "function") return module[name];
-    if (typeof module?.default?.[name] === "function") return module.default[name];
-  }
-
-  return null;
-}
-
-function unwrapApiData(response) {
-  return response?.data?.data ?? response?.data ?? response;
-}
-
-function normalizeApiEducation(rawEducation) {
-  if (!rawEducation || typeof rawEducation !== "object") return null;
-
-  return {
-    id:
-      rawEducation.educationId ||
-      rawEducation.education_id ||
-      rawEducation.id ||
-      rawEducation.resumeEducationId ||
-      "",
-    highSchool:
-      rawEducation.highSchool ||
-      rawEducation.high_school ||
-      rawEducation.highSchoolName ||
-      rawEducation.high_school_name ||
-      rawEducation.schoolNameHigh ||
-      "",
-    university:
-      rawEducation.university ||
-      rawEducation.university_name ||
-      rawEducation.universityName ||
-      rawEducation.schoolName ||
-      rawEducation.school_name ||
-      "",
-    major:
-      rawEducation.major ||
-      rawEducation.major_name ||
-      rawEducation.majorName ||
-      rawEducation.department ||
-      "",
-    grade:
-      rawEducation.grade ||
-      rawEducation.gpa ||
-      rawEducation.score ||
-      "",
-    gradeScale:
-      rawEducation.gradeScale ||
-      rawEducation.grade_scale ||
-      rawEducation.gpaScale ||
-      rawEducation.gpa_scale ||
-      "",
-    hasGraduate: Boolean(
-      rawEducation.hasGraduate ||
-        rawEducation.has_graduate ||
-        rawEducation.graduateSchool ||
-        rawEducation.graduate_school ||
-        rawEducation.graduateSchoolName ||
-        rawEducation.graduate_school_name
-    ),
-    graduateSchool:
-      rawEducation.graduateSchool ||
-      rawEducation.graduate_school ||
-      rawEducation.graduateSchoolName ||
-      rawEducation.graduate_school_name ||
-      "",
-    graduateMajor:
-      rawEducation.graduateMajor ||
-      rawEducation.graduate_major ||
-      rawEducation.graduateMajorName ||
-      rawEducation.graduate_major_name ||
-      "",
-  };
-}
-
-function mergeEducationItems(items) {
-  const list = Array.isArray(items) ? items : items ? [items] : [];
-  const normalized = list.map(normalizeApiEducation).filter(Boolean);
-
-  if (!normalized.length) return null;
-
-  return normalized.reduce(
-    (merged, item) => ({
-      id: merged.id || item.id,
-      highSchool: merged.highSchool || item.highSchool,
-      university: merged.university || item.university,
-      major: merged.major || item.major,
-      grade: merged.grade || item.grade,
-      gradeScale: merged.gradeScale || item.gradeScale,
-      hasGraduate: merged.hasGraduate || item.hasGraduate,
-      graduateSchool: merged.graduateSchool || item.graduateSchool,
-      graduateMajor: merged.graduateMajor || item.graduateMajor,
-    }),
-    normalizeApiEducation({})
-  );
-}
-
-function hasEducationInput(form) {
-  return [
-    form.highSchool,
-    form.university,
-    form.major,
-    form.grade,
-    form.gradeScale,
-    form.graduateSchool,
-    form.graduateMajor,
-  ].some(hasText);
-}
-
-function hasApiEducationValue(education) {
-  if (!education) return false;
-
-  return [
-    education.highSchool,
-    education.university,
-    education.major,
-    education.grade,
-    education.gradeScale,
-    education.graduateSchool,
-    education.graduateMajor,
-  ].some(hasText);
-}
-
-function hasDraftFormValue(form) {
-  if (!form || typeof form !== "object") return false;
-
-  return Object.values(form).some((value) => {
-    if (typeof value === "boolean") return value;
-    return hasText(value);
-  });
-}
-
-function buildEducationPayload(form) {
-  return {
-    highSchool: form.highSchool || "",
-    university: form.university || "",
-    major: form.major || "",
-    grade: form.grade || "",
-    gradeScale: form.gradeScale || "",
-    hasGraduate: Boolean(form.hasGraduate),
-    graduateSchool: form.hasGraduate ? form.graduateSchool || "" : "",
-    graduateMajor: form.hasGraduate ? form.graduateMajor || "" : "",
-    high_school: form.highSchool || "",
-    university_name: form.university || "",
-    major_name: form.major || "",
-    gpa: form.grade || "",
-    gpa_scale: form.gradeScale || "",
-    has_graduate: Boolean(form.hasGraduate),
-    graduate_school: form.hasGraduate ? form.graduateSchool || "" : "",
-    graduate_major: form.hasGraduate ? form.graduateMajor || "" : "",
-  };
-}
-
-async function loadEducationsFromApi(resumeId) {
-  if (!resumeId) return null;
-
-  const module = await import("../services/resumeDetailApi.js");
-  const getEducations = pickApiFunction(module, [
-    "getEducations",
-    "getResumeEducations",
-    "fetchEducations",
-    "fetchResumeEducations",
-    "listEducations",
-  ]);
-
-  if (!getEducations) return null;
-
-  const response = await getEducations(resumeId);
-  const data = unwrapApiData(response);
-  const educations = Array.isArray(data)
-    ? data
-    : data?.educations || data?.educationList || data?.items || data?.content || [];
-
-  return mergeEducationItems(educations);
-}
-
-async function saveEducationToApi({ resumeId, educationId, form }) {
-  if (!resumeId || !hasEducationInput(form)) return educationId || "";
-
-  const module = await import("../services/resumeDetailApi.js");
-  const payload = buildEducationPayload(form);
-
-  if (educationId) {
-    const updateEducation = pickApiFunction(module, [
-      "updateEducation",
-      "updateResumeEducation",
-      "putEducation",
-      "editEducation",
-    ]);
-
-    if (updateEducation) {
-      const response = await updateEducation(resumeId, educationId, payload);
-      const data = unwrapApiData(response);
-      return data?.educationId || data?.education_id || data?.id || educationId;
-    }
-  }
-
-  const createEducation = pickApiFunction(module, [
-    "createEducation",
-    "createResumeEducation",
-    "postEducation",
-    "addEducation",
-    "saveEducation",
-  ]);
-
-  if (!createEducation) return educationId || "";
-
-  const response = await createEducation(resumeId, payload);
-  const data = unwrapApiData(response);
-
-  return data?.educationId || data?.education_id || data?.id || educationId || "";
-}
-
-
-
-function hasExperienceInput(experience = {}) {
-  return [
-    experience.title,
-    experience.startDate,
-    experience.endDate,
-  ].some(hasText) || Boolean(experience.isOngoing);
-}
-
-function buildExperiencePayload(experience = {}) {
-  return {
-    title: experience.title || "",
-    activityName: experience.title || "",
-    activity_name: experience.title || "",
-    experienceTitle: experience.title || "",
-    experience_title: experience.title || "",
-    startDate: experience.startDate || "",
-    start_date: experience.startDate || "",
-    endDate: experience.isOngoing ? "" : experience.endDate || "",
-    end_date: experience.isOngoing ? "" : experience.endDate || "",
-    isOngoing: Boolean(experience.isOngoing),
-    is_ongoing: Boolean(experience.isOngoing),
-    progressYn: experience.isOngoing ? "Y" : "N",
-    progress_yn: experience.isOngoing ? "Y" : "N",
-  };
-}
-
-function extractExperienceId(data, fallback = "") {
-  const source = unwrapApiData(data);
-
-  return (
-    source?.experienceId ||
-    source?.experience_id ||
-    source?.resumeExperienceId ||
-    source?.resume_experience_id ||
-    source?.id ||
-    data?.experienceId ||
-    data?.experience_id ||
-    data?.id ||
-    fallback ||
-    ""
-  );
-}
-
-async function saveExperiencesToApi({ resumeId, experienceIds = [], experiences = [] }) {
-  if (!resumeId) return experienceIds;
-
-  const module = await import("../services/resumeDetailApi.js");
-  const createExperience = pickApiFunction(module, [
-    "createExperience",
-    "createResumeExperience",
-    "postExperience",
-    "addExperience",
-    "saveExperience",
-  ]);
-  const updateExperience = pickApiFunction(module, [
-    "updateExperience",
-    "updateResumeExperience",
-    "putExperience",
-    "editExperience",
-  ]);
-
-  if (!createExperience && !updateExperience) return experienceIds;
-
-  const nextIds = [...experienceIds];
-
-  for (let index = 0; index < experiences.length; index += 1) {
-    const experience = experiences[index];
-
-    if (!hasExperienceInput(experience)) continue;
-
-    const payload = buildExperiencePayload(experience);
-    const savedId = nextIds[index] || experience?.id || experience?.experienceId || experience?.experience_id || "";
-
-    if (savedId && updateExperience) {
-      const response = await updateExperience(resumeId, savedId, payload);
-      nextIds[index] = extractExperienceId(response, savedId);
-      continue;
-    }
-
-    if (createExperience) {
-      const response = await createExperience(resumeId, payload);
-      nextIds[index] = extractExperienceId(response, savedId);
-    }
-  }
-
-  return nextIds;
-}
-
-
-function hasCertificateInput(certificate = {}) {
-  return [
-    certificate.type,
-    certificate.name,
-    certificate.date,
-    certificate.organization,
-  ].some(hasText);
-}
-
-function buildCertificatePayload(certificate = {}) {
-  return {
-    type: certificate.type || "국가",
-    certificateType: certificate.type || "국가",
-    certificate_type: certificate.type || "국가",
-    name: certificate.name || "",
-    certificateName: certificate.name || "",
-    certificate_name: certificate.name || "",
-    date: certificate.date || "",
-    acquiredDate: certificate.date || "",
-    acquired_date: certificate.date || "",
-    organization: certificate.organization || "",
-    issuingOrganization: certificate.organization || "",
-    issuing_organization: certificate.organization || "",
-  };
-}
-
-function extractCertificateId(data, fallback = "") {
-  const source = unwrapApiData(data);
-
-  return (
-    source?.certificateId ||
-    source?.certificate_id ||
-    source?.resumeCertificateId ||
-    source?.resume_certificate_id ||
-    source?.id ||
-    data?.certificateId ||
-    data?.certificate_id ||
-    data?.id ||
-    fallback ||
-    ""
-  );
-}
-
-async function saveCertificatesToApi({ resumeId, certificateIds = [], certificates = [] }) {
-  if (!resumeId) return certificateIds;
-
-  const module = await import("../services/resumeDetailApi.js");
-  const createCertificate = pickApiFunction(module, [
-    "createCertificate",
-    "createResumeCertificate",
-    "postCertificate",
-    "addCertificate",
-    "saveCertificate",
-  ]);
-  const updateCertificate = pickApiFunction(module, [
-    "updateCertificate",
-    "updateResumeCertificate",
-    "putCertificate",
-    "editCertificate",
-  ]);
-
-  if (!createCertificate && !updateCertificate) return certificateIds;
-
-  const nextIds = [...certificateIds];
-
-  for (let index = 0; index < certificates.length; index += 1) {
-    const certificate = certificates[index];
-
-    if (!hasCertificateInput(certificate)) continue;
-
-    const payload = buildCertificatePayload(certificate);
-    const savedId =
-      nextIds[index] ||
-      certificate?.id ||
-      certificate?.certificateId ||
-      certificate?.certificate_id ||
-      "";
-
-    if (savedId && updateCertificate) {
-      const response = await updateCertificate(resumeId, savedId, payload);
-      nextIds[index] = extractCertificateId(response, savedId);
-      continue;
-    }
-
-    if (createCertificate) {
-      const response = await createCertificate(resumeId, payload);
-      nextIds[index] = extractCertificateId(response, savedId);
-    }
-  }
-
-  return nextIds;
-}
-
 export default function Resume() {
   const navigate = useNavigate();
   const savedDraft = mergeResumeDraftWithBackup(getResumeDraft(null), readDirectResumeBackup());
@@ -986,28 +566,17 @@ export default function Resume() {
   const [completeModalOpen, setCompleteModalOpen] = useState(false);
   const [missingItems, setMissingItems] = useState([]);
   const [userProfile, setUserProfile] = useState(() => getUserProfile());
-  const [resumeId, setResumeId] = useState("");
-  const [apiReady, setApiReady] = useState(false);
-  const [apiSyncStatus, setApiSyncStatus] = useState("checking");
-  const [educationApiId, setEducationApiId] = useState("");
-  const [educationApiStatus, setEducationApiStatus] = useState("idle");
-  const [experienceApiIds, setExperienceApiIds] = useState(() =>
-    (savedDraft?.experiences || []).map(
-      (item) => item?.id || item?.experienceId || item?.experience_id || ""
-    )
-  );
-  const [experienceApiStatus, setExperienceApiStatus] = useState("idle");
-  const [certificateApiIds, setCertificateApiIds] = useState(() =>
-    (savedDraft?.certificates || []).map(
-      (item) => item?.id || item?.certificateId || item?.certificate_id || ""
-    )
-  );
-  const [certificateApiStatus, setCertificateApiStatus] = useState("idle");
-  const lastEducationPayloadRef = useRef("");
-  const lastExperiencePayloadRef = useRef("");
-  const lastCertificatePayloadRef = useRef("");
+  const [resumeId, setResumeId] = useState(() => getActiveResumeId());
   const formRef = useRef(form);
+  const techStacksRef = useRef(techStacks);
+  const experiencesRef = useRef(experiences);
+  const essaysRef = useRef(essays);
+  const certificatesRef = useRef(certificates);
+  const careersRef = useRef(careers);
+  const filesRef = useRef(files);
+  const githubRef = useRef(github);
   const hasMountedRef = useRef(false);
+  const hasUserEditedRef = useRef(false);
 
   const syncProfileFields = () => {
     const nextProfile = getUserProfile();
@@ -1034,61 +603,6 @@ export default function Resume() {
   };
 
   useEffect(() => {
-    let ignore = false;
-
-    const initializeResumeApi = async () => {
-      try {
-        const currentDraft = mergeResumeDraftWithBackup(
-          getResumeDraft({}),
-          readDirectResumeBackup()
-        );
-        const currentEducationSnapshot = readEducationSnapshot();
-
-        if (currentDraft?.form && hasDraftFormValue(currentDraft.form)) {
-          const profileFields = getProfileFormFields();
-
-          setForm((prev) => {
-            const nextForm = {
-              ...prev,
-              ...mergeEducationSnapshot(currentDraft.form, currentEducationSnapshot),
-              ...profileFields,
-            };
-
-            formRef.current = nextForm;
-            return nextForm;
-          });
-        }
-
-        const activeResumeId = await ensureActiveResume(currentDraft || {});
-
-        if (ignore) return;
-
-        setResumeId(activeResumeId || "");
-        setApiSyncStatus(activeResumeId ? "api" : "fallback");
-        setEducationApiStatus(activeResumeId ? "fallback" : "fallback");
-        setExperienceApiStatus(activeResumeId ? "fallback" : "fallback");
-        setCertificateApiStatus(activeResumeId ? "fallback" : "fallback");
-      } catch (error) {
-        console.warn("Resume API 초기화 실패: localStorage fallback으로 계속 진행합니다.", error);
-        if (!ignore) {
-          setApiSyncStatus("fallback");
-          setEducationApiStatus("fallback");
-          setExperienceApiStatus("fallback");
-          setCertificateApiStatus("fallback");
-        }
-      } finally {
-        if (!ignore) setApiReady(true);
-      }
-    };
-
-    initializeResumeApi();
-
-    return () => {
-      ignore = true;
-    };
-  }, []);
-
-  useEffect(() => {
     syncProfileFields();
 
     const handleFocus = () => syncProfileFields();
@@ -1102,6 +616,28 @@ export default function Resume() {
     return () => {
       window.removeEventListener("focus", handleFocus);
       window.removeEventListener("storage", handleStorage);
+    };
+  }, []);
+
+  useEffect(() => {
+    let ignore = false;
+
+    const initializeResume = async () => {
+      try {
+        const id = await ensureActiveResume(getResumeDraft({}));
+
+        if (!ignore) {
+          setResumeId(id || "");
+        }
+      } catch (error) {
+        console.warn("resume 생성 실패: localStorage fallback을 유지합니다.", error);
+      }
+    };
+
+    initializeResume();
+
+    return () => {
+      ignore = true;
     };
   }, []);
 
@@ -1191,12 +727,19 @@ export default function Resume() {
 
   useEffect(() => {
     formRef.current = form;
+    techStacksRef.current = techStacks;
+    experiencesRef.current = experiences;
+    essaysRef.current = essays;
+    certificatesRef.current = certificates;
+    careersRef.current = careers;
+    filesRef.current = files;
+    githubRef.current = github;
 
     if (!hasMountedRef.current) {
       hasMountedRef.current = true;
     }
 
-    const lockedForm = mergeEducationSnapshot(form, readEducationSnapshot() || {});
+    const lockedForm = form;
     formRef.current = lockedForm;
 
     const draft = {
@@ -1225,100 +768,9 @@ export default function Resume() {
     saveTechStacks(cleanTechStacks);
     notifyCareerScoreChanged();
 
-    if (!apiReady) return;
-
-    const timer = window.setTimeout(() => {
-      saveResumeDraftToApi(draft)
-        .then(() => {
-          if (resumeId) setApiSyncStatus("api");
-        })
-        .catch((error) => {
-          console.warn("Resume API 자동 저장 실패: localStorage fallback 저장은 유지됩니다.", error);
-          setApiSyncStatus("fallback");
-        });
-
-      const educationPayloadKey = JSON.stringify({
-        resumeId,
-        educationId: educationApiId,
-        highSchool: lockedForm.highSchool,
-        university: lockedForm.university,
-        major: lockedForm.major,
-        grade: lockedForm.grade,
-        gradeScale: lockedForm.gradeScale,
-        hasGraduate: lockedForm.hasGraduate,
-        graduateSchool: lockedForm.graduateSchool,
-        graduateMajor: lockedForm.graduateMajor,
-      });
-
-      if (resumeId && educationPayloadKey !== lastEducationPayloadRef.current) {
-        lastEducationPayloadRef.current = educationPayloadKey;
-        setEducationApiStatus("saving");
-
-        saveEducationToApi({ resumeId, educationId: educationApiId, form: lockedForm })
-          .then((nextEducationId) => {
-            if (nextEducationId) setEducationApiId(nextEducationId);
-            setEducationApiStatus("api");
-          })
-          .catch((error) => {
-            console.warn("Education API 자동 저장 실패: localStorage fallback 저장은 유지됩니다.", error);
-            setEducationApiStatus("fallback");
-          });
-      }
-
-      const experiencePayloadKey = JSON.stringify({
-        resumeId,
-        experienceIds: experienceApiIds,
-        experiences,
-      });
-
-      if (
-        resumeId &&
-        experiences.some(hasExperienceInput) &&
-        experiencePayloadKey !== lastExperiencePayloadRef.current
-      ) {
-        lastExperiencePayloadRef.current = experiencePayloadKey;
-        setExperienceApiStatus("saving");
-
-        saveExperiencesToApi({ resumeId, experienceIds: experienceApiIds, experiences })
-          .then((nextExperienceIds) => {
-            setExperienceApiIds(nextExperienceIds || []);
-            setExperienceApiStatus("api");
-          })
-          .catch((error) => {
-            console.warn("Experience API 자동 저장 실패: localStorage fallback 저장은 유지됩니다.", error);
-            setExperienceApiStatus("fallback");
-          });
-      }
-
-      const certificatePayloadKey = JSON.stringify({
-        resumeId,
-        certificateIds: certificateApiIds,
-        certificates,
-      });
-
-      if (
-        resumeId &&
-        certificates.some(hasCertificateInput) &&
-        certificatePayloadKey !== lastCertificatePayloadRef.current
-      ) {
-        lastCertificatePayloadRef.current = certificatePayloadKey;
-        setCertificateApiStatus("saving");
-
-        saveCertificatesToApi({ resumeId, certificateIds: certificateApiIds, certificates })
-          .then((nextCertificateIds) => {
-            setCertificateApiIds(nextCertificateIds || []);
-            setCertificateApiStatus("api");
-          })
-          .catch((error) => {
-            console.warn("Certificate API 자동 저장 실패: localStorage fallback 저장은 유지됩니다.", error);
-            setCertificateApiStatus("fallback");
-          });
-      }
-    }, 600);
-
-    return () => window.clearTimeout(timer);
+    // 1단계 안정화 버전에서는 API 자동 저장을 실행하지 않습니다.
+    // 입력값은 localStorage draft, direct backup, education snapshot에만 저장합니다.
   }, [
-    apiReady,
     form,
     techStacks,
     experiences,
@@ -1327,32 +779,43 @@ export default function Resume() {
     careers,
     files,
     github,
-    resumeId,
-    educationApiId,
-    experienceApiIds,
-    certificateApiIds,
   ]);
 
-  const persistDraftImmediately = (nextForm = form) => {
-    const lockedForm = mergeEducationSnapshot(nextForm, readEducationSnapshot() || {});
+  const persistDraftImmediately = (nextForm = form, overrides = {}) => {
+    const lockedForm = nextForm;
+    const nextTechStacks = overrides.techStacks ?? techStacksRef.current ?? techStacks;
+    const nextExperiences = overrides.experiences ?? experiencesRef.current ?? experiences;
+    const nextEssays = overrides.essays ?? essaysRef.current ?? essays;
+    const nextCertificates = overrides.certificates ?? certificatesRef.current ?? certificates;
+    const nextCareers = overrides.careers ?? careersRef.current ?? careers;
+    const nextFiles = overrides.files ?? filesRef.current ?? files;
+    const nextGithub = overrides.github ?? githubRef.current ?? github;
+
     formRef.current = lockedForm;
+    techStacksRef.current = nextTechStacks;
+    experiencesRef.current = nextExperiences;
+    essaysRef.current = nextEssays;
+    certificatesRef.current = nextCertificates;
+    careersRef.current = nextCareers;
+    filesRef.current = nextFiles;
+    githubRef.current = nextGithub;
 
     const draft = {
       form: lockedForm,
-      techStacks,
-      experiences,
-      essays,
-      certificates,
-      careers,
-      files,
-      github,
+      techStacks: nextTechStacks,
+      experiences: nextExperiences,
+      essays: nextEssays,
+      certificates: nextCertificates,
+      careers: nextCareers,
+      files: nextFiles,
+      github: nextGithub,
       updatedAt: new Date().toISOString(),
     };
 
     saveResumeDraft(draft);
     saveDirectResumeBackup(draft);
     saveEducationSnapshot(lockedForm);
-    saveTechStacks(sanitizeTechStacks(techStacks));
+    saveTechStacks(sanitizeTechStacks(nextTechStacks));
     saveResumeProgress(progress);
     notifyCareerScoreChanged();
   };
@@ -1394,6 +857,8 @@ export default function Resume() {
       return;
     }
 
+    hasUserEditedRef.current = true;
+
     const nextForm = {
       ...(formRef.current || form),
       [key]: value,
@@ -1405,58 +870,126 @@ export default function Resume() {
   };
 
   const updateArray = (setter, index, key, value) => {
-    setter((prev) =>
-      prev.map((item, itemIndex) =>
+    hasUserEditedRef.current = true;
+
+    setter((prev) => {
+      const nextArray = prev.map((item, itemIndex) =>
         itemIndex === index ? { ...item, [key]: value } : item
-      )
-    );
+      );
+
+      if (setter === setExperiences) {
+        experiencesRef.current = nextArray;
+        persistDraftImmediately(formRef.current || form, { experiences: nextArray });
+      }
+
+      if (setter === setEssays) {
+        essaysRef.current = nextArray;
+        persistDraftImmediately(formRef.current || form, { essays: nextArray });
+      }
+
+      if (setter === setCertificates) {
+        certificatesRef.current = nextArray;
+        persistDraftImmediately(formRef.current || form, { certificates: nextArray });
+      }
+
+      if (setter === setCareers) {
+        careersRef.current = nextArray;
+        persistDraftImmediately(formRef.current || form, { careers: nextArray });
+      }
+
+      return nextArray;
+    });
   };
 
   const addExperience = () => {
-    setExperiences((prev) => [...prev, { ...initialExperience }]);
-    setExperienceApiIds((prev) => [...prev, ""]);
+    hasUserEditedRef.current = true;
+    const nextExperiences = [...(experiencesRef.current || experiences), { ...initialExperience }];
+    experiencesRef.current = nextExperiences;
+    setExperiences(nextExperiences);
+    persistDraftImmediately(formRef.current || form, { experiences: nextExperiences });
     showToast("경험 카드가 추가되었습니다.");
   };
 
   const addEssay = () => {
-    setEssays((prev) => [
-      ...prev,
+    hasUserEditedRef.current = true;
+    const baseEssays = essaysRef.current || essays;
+    const nextEssays = [
+      ...baseEssays,
       {
         title: "",
         body: "",
-        label: `문항 ${prev.length + 1}`,
+        label: `문항 ${baseEssays.length + 1}`,
         titlePlaceholder: "소제목 입력",
         bodyPlaceholder: "자소서 초안을 입력하세요.",
       },
-    ]);
+    ];
+    essaysRef.current = nextEssays;
+    setEssays(nextEssays);
+    persistDraftImmediately(formRef.current || form, { essays: nextEssays });
     showToast("자소서 문항이 추가되었습니다.");
   };
 
   const addCertificate = () => {
-    setCertificates((prev) => [...prev, { ...initialCertificate }]);
-    setCertificateApiIds((prev) => [...prev, ""]);
+    hasUserEditedRef.current = true;
+    const nextCertificates = [...(certificatesRef.current || certificates), { ...initialCertificate }];
+    certificatesRef.current = nextCertificates;
+    setCertificates(nextCertificates);
+    persistDraftImmediately(formRef.current || form, { certificates: nextCertificates });
     showToast("자격증 카드가 추가되었습니다.");
   };
 
   const removeCertificate = (index) => {
-    setCertificates((prev) => {
-      if (prev.length <= 1) return prev;
-      return prev.filter((_, itemIndex) => itemIndex !== index);
-    });
-    setCertificateApiIds((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
+    hasUserEditedRef.current = true;
+    const currentCertificates = certificatesRef.current || certificates;
+    if (currentCertificates.length <= 1) return;
+
+    const nextCertificates = currentCertificates.filter((_, itemIndex) => itemIndex !== index);
+    certificatesRef.current = nextCertificates;
+    setCertificates(nextCertificates);
+    persistDraftImmediately(formRef.current || form, { certificates: nextCertificates });
     showToast("자격증 카드가 삭제되었습니다.");
   };
 
   const addCareer = () => {
-    setCareers((prev) => [...prev, { ...initialCareer }]);
+    hasUserEditedRef.current = true;
+    const nextCareers = [...(careersRef.current || careers), { ...initialCareer }];
+    careersRef.current = nextCareers;
+    setCareers(nextCareers);
+    persistDraftImmediately(formRef.current || form, { careers: nextCareers });
     showToast("경력 카드가 추가되었습니다.");
   };
 
   const removeItem = (setter, index) => {
+    hasUserEditedRef.current = true;
+
     setter((prev) => {
       if (prev.length <= 1) return prev;
-      return prev.filter((_, itemIndex) => itemIndex !== index);
+
+      const nextArray = prev.filter((_, itemIndex) => itemIndex !== index);
+
+      if (setter === setExperiences) {
+        experiencesRef.current = nextArray;
+        persistDraftImmediately(formRef.current || form, { experiences: nextArray });
+      }
+
+      if (setter === setEssays) {
+        essaysRef.current = nextArray;
+        persistDraftImmediately(formRef.current || form, { essays: nextArray });
+      }
+
+      if (setter === setCertificates) {
+        certificatesRef.current = nextArray;
+        persistDraftImmediately(formRef.current || form, { certificates: nextArray });
+      }
+
+      if (setter === setCareers) {
+        careersRef.current = nextArray;
+        persistDraftImmediately(formRef.current || form, { careers: nextArray });
+      }
+
+      return nextArray;
     });
+
     showToast("카드가 삭제되었습니다.");
   };
 
@@ -1578,11 +1111,7 @@ export default function Resume() {
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="min-w-[320px] flex-1">
             <div className="mb-[7px] text-[13px] font-black text-emerald-600">
-              {apiSyncStatus === "checking"
-                ? "저장소 확인 중"
-                : apiSyncStatus === "api"
-                  ? `API 연동 저장됨${resumeId ? ` · ID ${resumeId}` : ""}`
-                  : "시연용 저장소에 저장됨"} · <strong>{progress}% 완료</strong>
+              자동 저장됨{resumeId ? ` · Resume ID ${resumeId}` : ""} · <strong>{progress}% 완료</strong>
             </div>
             <div className="h-[9px] overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
               <div
@@ -1734,17 +1263,7 @@ export default function Resume() {
         title="2. 학력 사항"
         description="학점 척도를 통일하면 AI 파싱 정확도가 높아집니다."
       >
-        <div className="mb-4 rounded-[18px] border border-blue-100 bg-blue-50 px-4 py-3 text-[13px] font-extrabold text-blue-700 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-300">
-          학력 API 상태 · 저장 안정화 V9 · {educationApiStatus === "saving"
-            ? "저장 중"
-            : educationApiStatus === "api"
-              ? "API 연동 저장됨"
-              : educationApiStatus === "fallback"
-                ? "시연용 저장소에 저장됨"
-                : "대기 중"}
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
+<div className="grid grid-cols-2 gap-4">
           <Field label="고등학교명">
             <input
               className={inputClass}
@@ -1838,17 +1357,7 @@ export default function Resume() {
           </button>
         }
       >
-        <div className="mb-4 rounded-[18px] border border-indigo-100 bg-indigo-50 px-4 py-3 text-[13px] font-extrabold text-indigo-700 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300">
-          경험 API 상태 · V8 기반 유지 · {experienceApiStatus === "saving"
-            ? "저장 중"
-            : experienceApiStatus === "api"
-              ? "API 연동 저장됨"
-              : experienceApiStatus === "fallback"
-                ? "시연용 저장소에 저장됨"
-                : "대기 중"}
-        </div>
-
-        {experiences.map((experience, index) => (
+{experiences.map((experience, index) => (
           <div
             key={index}
             className="mb-4 rounded-[22px] border border-slate-200 bg-slate-100 p-5 last:mb-0 dark:border-slate-700 dark:bg-slate-800"
@@ -2046,17 +1555,7 @@ export default function Resume() {
           </button>
         }
       >
-        <div className="mb-4 rounded-[18px] border border-purple-100 bg-purple-50 px-4 py-3 text-[13px] font-extrabold text-purple-700 dark:border-purple-900 dark:bg-purple-950/40 dark:text-purple-300">
-          자격증 API 상태 · V9 1차 연동 · {certificateApiStatus === "saving"
-            ? "저장 중"
-            : certificateApiStatus === "api"
-              ? "API 연동 저장됨"
-              : certificateApiStatus === "fallback"
-                ? "시연용 저장소에 저장됨"
-                : "대기 중"}
-        </div>
-
-        {certificates.map((certificate, index) => (
+{certificates.map((certificate, index) => (
           <div
             key={index}
             className="mb-4 rounded-[22px] border border-slate-200 bg-slate-100 p-5 last:mb-0 dark:border-slate-700 dark:bg-slate-800"
