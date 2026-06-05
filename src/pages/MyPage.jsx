@@ -9,7 +9,6 @@ import {
   getReadinessStatus,
   getTechStacks,
   notifyCareerScoreChanged,
-  readJson,
 } from "../utils/careerScore.js";
 import {
   parseCoverLetterData,
@@ -17,152 +16,38 @@ import {
   parseInterviewData,
   parseResumeData,
 } from "../utils/dataParserClient.js";
+import { readJson, writeJson } from "../services/careerDataService.js";
+import { getCoverLetters, getCoverLetterMap, COVER_LETTER_KEY } from "../services/coverLetterService.js";
+import { getFavoriteJobs, saveFavoriteJobs, FAVORITE_KEYS } from "../services/favoriteJobService.js";
+import { getInterviewResults, INTERVIEW_RESULT_KEY } from "../services/interviewService.js";
+import { RESUME_DRAFT_KEY } from "../services/resumeService.js";
+import {
+  getCurrentUser,
+  getProfileImage,
+  getTheme,
+  getUserProfile,
+  saveProfileImage,
+  saveTheme,
+  saveUserProfile,
+  USER_PROFILE_KEY,
+  PROFILE_NAME_KEY,
+} from "../services/profileService.js";
 
-const INTERVIEW_RESULT_KEY = "articlue_interview_results";
-const COVER_LETTER_KEY = "articlue_cover_letters";
-const RESUME_DRAFT_KEY = "articlue_resume_draft";
-const USER_PROFILE_KEY = "articlue_user_profile";
-const PROFILE_NAME_KEY = "articlue_profile_name";
-
-const FAVORITE_KEYS = [
-  "articlue_favorite_jobs",
-  "favoriteJobs",
-  "likedJobs",
-  "articlueLikedJobs",
-];
-
-const COMPANY_NAME_MAP = {
-  naver: "네이버웹툰",
-  toss: "토스",
-  kakao: "카카오",
-};
-
-const EMPTY_USER_PROFILE = {
-  name: "",
-  nickname: "",
-  email: "",
-  phone: "",
-  birth: "",
-  postcode: "",
-  address: "",
-  baseAddress: "",
-  detailAddress: "",
-  gender: "",
-  military: "",
-};
-
-function readCurrentUser() {
-  try {
-    return JSON.parse(localStorage.getItem("articlue_current_user") || "null");
-  } catch {
-    return null;
-  }
-}
 
 function readUserProfile() {
-  const currentUser = readCurrentUser();
-  const savedProfile = readJson(USER_PROFILE_KEY, {});
-
-  return {
-    ...EMPTY_USER_PROFILE,
-    name:
-      savedProfile?.name ||
-      localStorage.getItem(PROFILE_NAME_KEY) ||
-      currentUser?.name ||
-      "사용자",
-    nickname: savedProfile?.nickname || currentUser?.nickname || "",
-    email: savedProfile?.email || currentUser?.email || "",
-    phone: savedProfile?.phone || currentUser?.phone || "",
-    birth: savedProfile?.birth || currentUser?.birth || "",
-    postcode: savedProfile?.postcode || currentUser?.postcode || "",
-    address: savedProfile?.address || currentUser?.address || "",
-    baseAddress:
-      savedProfile?.baseAddress ||
-      currentUser?.baseAddress ||
-      savedProfile?.address ||
-      currentUser?.address ||
-      "",
-    detailAddress:
-      savedProfile?.detailAddress || currentUser?.detailAddress || "",
-    gender: savedProfile?.gender || currentUser?.gender || "",
-    military: savedProfile?.military || currentUser?.military || "",
-  };
-}
-
-function applyDocumentTheme(theme) {
-  if (theme === "dark") document.documentElement.classList.add("dark");
-  else document.documentElement.classList.remove("dark");
-}
-
-function clamp(value) {
-  const number = Number(value);
-  if (!Number.isFinite(number)) return 0;
-  return Math.min(100, Math.max(0, Math.round(number)));
-}
-
-function normalizeJobs(jobs) {
-  return jobs.map((job, index) => ({
-    id: job.id || job.company || `job-${index}`,
-    company: job.company || job.name || "기업명 없음",
-    role: job.role || job.position || "직무 정보 없음",
-    match: `${clamp(job.match || job.score || job.matchRate || 80)}%`,
-    desc:
-      job.desc ||
-      job.description ||
-      "찜한 기업 공고를 기반으로 지원 전략을 이어갈 수 있습니다.",
-    stacks: Array.isArray(job.stacks)
-      ? job.stacks
-      : Array.isArray(job.tags)
-      ? job.tags
-      : ["Java", "Spring Boot"],
-  }));
+  return getUserProfile();
 }
 
 function readFavoriteJobs() {
-  for (const key of FAVORITE_KEYS) {
-    try {
-      const raw = localStorage.getItem(key);
-      if (!raw) continue;
-
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length) return normalizeJobs(parsed);
-    } catch {
-      // ignore
-    }
-  }
-
-  return [];
+  return getFavoriteJobs();
 }
 
 function readInterviewResults() {
-  const parsed = readJson(INTERVIEW_RESULT_KEY, []);
-  return Array.isArray(parsed) ? parsed : [];
+  return getInterviewResults();
 }
 
 function readCoverLetters() {
-  const parsed = readJson(COVER_LETTER_KEY, {});
-
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    return [];
-  }
-
-  return Object.entries(parsed).map(([companyId, content]) => {
-    const motivation =
-      content?.지원동기 || content?.motivation || "지원동기 내용이 없습니다.";
-    const project =
-      content?.프로젝트경험 ||
-      content?.project ||
-      "프로젝트 경험 내용이 없습니다.";
-
-    return {
-      id: companyId,
-      company: COMPANY_NAME_MAP[companyId] || companyId,
-      title: `[${COMPANY_NAME_MAP[companyId] || companyId}] 맞춤 자소서 초안`,
-      motivation,
-      project,
-      savedAt: content?.savedAt || null,
-    };
-  });
+  return getCoverLetters();
 }
 
 function formatDate(value) {
@@ -179,6 +64,14 @@ function formatDate(value) {
     });
   } catch {
     return "최근 기록";
+  }
+}
+
+function applyDocumentTheme(theme) {
+  if (theme === "dark") {
+    document.documentElement.classList.add("dark");
+  } else {
+    document.documentElement.classList.remove("dark");
   }
 }
 
@@ -259,9 +152,7 @@ export default function MyPage() {
   const [activeTab, setActiveTab] = useState("resume");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
-  const [theme, setTheme] = useState(
-    () => localStorage.getItem("articlue-theme") || "light"
-  );
+  const [theme, setTheme] = useState(() => getTheme());
   const [userProfile, setUserProfile] = useState(() => readUserProfile());
   const [profileDraft, setProfileDraft] = useState(() => readUserProfile());
   const [profileEditing, setProfileEditing] = useState(false);
@@ -342,7 +233,7 @@ export default function MyPage() {
     setFavorites(readFavoriteJobs());
     setInterviewResults(readInterviewResults());
     setCoverLetters(readCoverLetters());
-    setProfileImage(localStorage.getItem("articlue_profile_image") || "");
+    setProfileImage(getProfileImage());
     setCareerScores(getCareerScores());
     setNextAction(getNextAction());
     setTechStacks(getTechStacks());
@@ -360,8 +251,8 @@ export default function MyPage() {
       const [resumeResult, coverLetterResult, interviewResult, favoriteResult] =
         await Promise.all([
           parseResumeData(readJson(RESUME_DRAFT_KEY, {})),
-          parseCoverLetterData(readJson(COVER_LETTER_KEY, {})),
-          parseInterviewData(readJson(INTERVIEW_RESULT_KEY, [])),
+          parseCoverLetterData(getCoverLetterMap()),
+          parseInterviewData(getInterviewResults()),
           parseFavoriteJobData(readFavoriteJobs()),
         ]);
 
@@ -390,7 +281,7 @@ export default function MyPage() {
     refreshPageData();
     refreshParserSummary();
 
-    const savedTheme = localStorage.getItem("articlue-theme") || "light";
+    const savedTheme = getTheme();
     setTheme(savedTheme);
     applyDocumentTheme(savedTheme);
 
@@ -448,7 +339,7 @@ export default function MyPage() {
   const toggleTheme = () => {
     const nextTheme = theme === "dark" ? "light" : "dark";
     setTheme(nextTheme);
-    localStorage.setItem("articlue-theme", nextTheme);
+    saveTheme(nextTheme);
     applyDocumentTheme(nextTheme);
 
     showToast(
@@ -472,7 +363,7 @@ export default function MyPage() {
   const removeFavorite = (id) => {
     const next = favorites.filter((job) => String(job.id) !== String(id));
     setFavorites(next);
-    localStorage.setItem("articlue_favorite_jobs", JSON.stringify(next));
+    saveFavoriteJobs(next);
     showToast("찜한 공고에서 삭제했습니다.");
   };
 
@@ -493,7 +384,7 @@ export default function MyPage() {
     const reader = new FileReader();
     reader.onload = () => {
       const result = String(reader.result || "");
-      localStorage.setItem("articlue_profile_image", result);
+      saveProfileImage(result);
       setProfileImage(result);
       showToast("프로필 이미지가 변경되었습니다.");
     };
@@ -501,7 +392,7 @@ export default function MyPage() {
   };
 
   const resetProfileImage = () => {
-    localStorage.removeItem("articlue_profile_image");
+    saveProfileImage("");
     setProfileImage("");
     showToast("기본 프로필 이미지로 변경되었습니다.");
   };
@@ -567,18 +458,14 @@ export default function MyPage() {
       return;
     }
 
-    localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(nextProfile));
-    localStorage.setItem(PROFILE_NAME_KEY, nextProfile.name);
+    saveUserProfile(nextProfile);
 
-    const currentUser = readCurrentUser();
+    const currentUser = getCurrentUser();
     if (currentUser) {
-      localStorage.setItem(
-        "articlue_current_user",
-        JSON.stringify({
-          ...currentUser,
-          ...nextProfile,
-        })
-      );
+      writeJson("articlue_current_user", {
+        ...currentUser,
+        ...nextProfile,
+      });
     }
 
     const users = readJson("articlue_users", []);
@@ -588,7 +475,7 @@ export default function MyPage() {
           ? { ...user, ...nextProfile }
           : user
       );
-      localStorage.setItem("articlue_users", JSON.stringify(nextUsers));
+      writeJson("articlue_users", nextUsers);
     }
 
     setUserProfile(nextProfile);

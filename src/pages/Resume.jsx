@@ -2,13 +2,22 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AppLayout from "../components/AppLayout.jsx";
 import { notifyCareerScoreChanged } from "../utils/careerScore.js";
-
-const RESUME_DRAFT_KEY = "articlue_resume_draft";
-const RESUME_PROGRESS_KEY = "articlue_resume_progress";
-const PROFILE_NAME_KEY = "articlue_profile_name";
-const GITHUB_KEY = "articlue_github_connection";
-const TECH_STACK_KEY = "articlue-resume-techs";
-const USER_PROFILE_KEY = "articlue_user_profile";
+import {
+  getGithubConnection,
+  getResumeDraft,
+  getTechStacks as getSavedTechStacks,
+  markResumeContinue,
+  markResumeSubmitted,
+  saveGithubConnection as saveGithubConnectionToService,
+  saveResumeDraft,
+  saveResumeProgress,
+  saveTechStacks,
+} from "../services/resumeService.js";
+import {
+  getUserProfile,
+  saveUserProfile,
+  USER_PROFILE_KEY,
+} from "../services/profileService.js";
 
 const programmingLanguages = [
   "Python", "JavaScript", "TypeScript", "Java", "Kotlin", "Swift", "Dart",
@@ -167,17 +176,8 @@ function getSectionRatio(values) {
   return completed / values.length;
 }
 
-function readJson(key, fallback) {
-  try {
-    const saved = localStorage.getItem(key);
-    return saved ? JSON.parse(saved) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
 function getProfileFormFields() {
-  const profile = readJson(USER_PROFILE_KEY, {});
+  const profile = getUserProfile();
 
   return {
     name: profile?.name || "",
@@ -382,10 +382,10 @@ const outlineButtonClass =
 
 export default function Resume() {
   const navigate = useNavigate();
-  const savedDraft = readJson(RESUME_DRAFT_KEY, null);
+  const savedDraft = getResumeDraft(null);
   const savedProfileFields = getProfileFormFields();
-  const savedGithub = readJson(GITHUB_KEY, initialGithub);
-  const savedTechs = sanitizeTechStacks(readJson(TECH_STACK_KEY, []));
+  const savedGithub = getGithubConnection(initialGithub);
+  const savedTechs = sanitizeTechStacks(getSavedTechStacks());
 
   const [form, setForm] = useState(() => ({
     ...initialForm,
@@ -433,10 +433,10 @@ export default function Resume() {
   const [missingModalOpen, setMissingModalOpen] = useState(false);
   const [completeModalOpen, setCompleteModalOpen] = useState(false);
   const [missingItems, setMissingItems] = useState([]);
-  const [userProfile, setUserProfile] = useState(() => readJson(USER_PROFILE_KEY, {}));
+  const [userProfile, setUserProfile] = useState(() => getUserProfile());
 
   const syncProfileFields = () => {
-    const nextProfile = readJson(USER_PROFILE_KEY, {});
+    const nextProfile = getUserProfile();
     const nextProfileFields = getProfileFormFields();
 
     setUserProfile(nextProfile || {});
@@ -447,7 +447,10 @@ export default function Resume() {
     }));
 
     if (nextProfileFields.name.trim()) {
-      localStorage.setItem(PROFILE_NAME_KEY, nextProfileFields.name.trim());
+      saveUserProfile({
+        ...nextProfile,
+        name: nextProfileFields.name.trim(),
+      });
     }
   };
 
@@ -548,7 +551,7 @@ export default function Resume() {
   ]);
 
   useEffect(() => {
-    localStorage.setItem(RESUME_PROGRESS_KEY, String(progress));
+    saveResumeProgress(progress);
     notifyCareerScoreChanged();
   }, [progress]);
 
@@ -565,7 +568,7 @@ export default function Resume() {
       updatedAt: new Date().toISOString(),
     };
 
-    localStorage.setItem(RESUME_DRAFT_KEY, JSON.stringify(draft));
+    saveResumeDraft(draft);
 
     const cleanTechStacks = sanitizeTechStacks(techStacks);
 
@@ -574,7 +577,7 @@ export default function Resume() {
       return;
     }
 
-    localStorage.setItem(TECH_STACK_KEY, JSON.stringify(cleanTechStacks));
+    saveTechStacks(cleanTechStacks);
     notifyCareerScoreChanged();
   }, [form, techStacks, experiences, essays, certificates, careers, files, github]);
 
@@ -705,7 +708,7 @@ export default function Resume() {
     };
 
     setGithub(nextGithub);
-    localStorage.setItem(GITHUB_KEY, JSON.stringify(nextGithub));
+    saveGithubConnectionToService(nextGithub);
     setGithubModalOpen(false);
     notifyCareerScoreChanged();
     showToast("GitHub 계정 정보가 저장되었습니다.");
@@ -735,7 +738,7 @@ export default function Resume() {
   const submitResume = () => {
     const nextMissingItems = getMissingItems();
 
-    localStorage.setItem(RESUME_PROGRESS_KEY, String(progress));
+    saveResumeProgress(progress);
     notifyCareerScoreChanged();
 
     if (nextMissingItems.length > 0) {
@@ -748,17 +751,16 @@ export default function Resume() {
   };
 
   const forceSubmitResume = () => {
-    localStorage.setItem(RESUME_PROGRESS_KEY, String(progress));
-    localStorage.setItem("articlue_resume_submitted", "true");
-    localStorage.setItem("articlue_resume_submitted_at", new Date().toISOString());
+    saveResumeProgress(progress);
+    markResumeSubmitted();
     notifyCareerScoreChanged();
     setMissingModalOpen(false);
     setCompleteModalOpen(true);
   };
 
   const saveAndExit = () => {
-    localStorage.setItem(RESUME_PROGRESS_KEY, String(progress));
-    localStorage.setItem("articlue_resume_continue", "true");
+    saveResumeProgress(progress);
+    markResumeContinue();
     notifyCareerScoreChanged();
     showToast("임시 저장되었습니다.");
     navigate("/home");

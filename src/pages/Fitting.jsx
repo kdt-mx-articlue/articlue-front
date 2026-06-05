@@ -1,8 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import AppLayout from "../components/AppLayout.jsx";
-
-const FAVORITE_KEY = "articlue_favorite_jobs";
+import {
+  getFavoriteJobs,
+  toggleFavoriteJob as toggleFavoriteJobFromService,
+} from "../services/favoriteJobService.js";
+import { saveCoverLetter } from "../services/coverLetterService.js";
+import { saveInterviewTarget } from "../services/interviewService.js";
+import { markResumeContinue } from "../services/resumeService.js";
+import { notifyCareerScoreChanged } from "../utils/careerScore.js";
 
 const companies = [
   {
@@ -151,12 +157,7 @@ export default function Fitting() {
   }, [searchParams]);
 
   useEffect(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem(FAVORITE_KEY) || "[]");
-      setFavorites(Array.isArray(saved) ? saved : []);
-    } catch {
-      setFavorites([]);
-    }
+    setFavorites(getFavoriteJobs());
   }, []);
 
   const showToast = (message) => {
@@ -167,64 +168,35 @@ export default function Fitting() {
   const isLiked = (id) => favorites.some((job) => job.id === id);
 
   const toggleFavoriteJob = (company) => {
-    setFavorites((prev) => {
-      const exists = prev.some((job) => job.id === company.id);
+    const { next, exists } = toggleFavoriteJobFromService(company);
 
-      const next = exists
-        ? prev.filter((job) => job.id !== company.id)
-        : [
-            ...prev,
-            {
-              id: company.id,
-              reason: company.favorite.reason,
-              company: company.company,
-              role: company.role,
-              match: company.score,
-              desc: company.favorite.desc,
-              stacks: company.favorite.stacks,
-              tags: company.favorite.stacks,
-              savedAt: new Date().toISOString(),
-            },
-          ];
+    setFavorites(next);
+    notifyCareerScoreChanged();
 
-      localStorage.setItem(FAVORITE_KEY, JSON.stringify(next));
-      showToast(
-        exists
-          ? "관심 기업이 삭제되었습니다."
-          : "관심 기업이 저장되었습니다."
-      );
-
-      return next;
-    });
+    showToast(
+      exists ? "관심 기업이 삭제되었습니다." : "관심 기업이 저장되었습니다."
+    );
   };
 
   const generateResume = (company) => {
     setSelectedId(company.id);
 
-    const saved = JSON.parse(
-      localStorage.getItem("articlue_cover_letters") || "{}"
-    );
+    saveCoverLetter(company.id, {
+      company: company.company,
+      지원동기: company.essay.motivation,
+      프로젝트경험: company.essay.project,
+      motivation: company.essay.motivation,
+      project: company.essay.project,
+    });
 
-    localStorage.setItem(
-      "articlue_cover_letters",
-      JSON.stringify({
-        ...saved,
-        [company.id]: {
-          지원동기: company.essay.motivation,
-          프로젝트경험: company.essay.project,
-          savedAt: new Date().toISOString(),
-        },
-      })
-    );
-
+    notifyCareerScoreChanged();
     setEssayModal(company);
     showToast("맞춤 자소서가 저장되었습니다.");
   };
 
   const goInterview = (company) => {
     setSelectedId(company.id);
-    localStorage.setItem("articlue_interview_company", company.company);
-    localStorage.setItem("articlue_interview_role", company.role);
+    saveInterviewTarget(company.company, company.role);
     navigate(`/interview?company=${encodeURIComponent(company.company)}`);
   };
 
@@ -253,9 +225,7 @@ export default function Fitting() {
 
               <Link
                 to="/resume"
-                onClick={() =>
-                  localStorage.setItem("articlue_resume_continue", "true")
-                }
+                onClick={markResumeContinue}
                 className="inline-flex items-center justify-center rounded-full border border-white/50 px-[18px] py-3 text-[14px] font-black text-white transition hover:-translate-y-0.5 hover:bg-white/10"
               >
                 이력서 보완하기
@@ -556,9 +526,7 @@ export default function Fitting() {
             <div className="mt-4 flex justify-end gap-[9px]">
               <button
                 type="button"
-                onClick={() =>
-                  showToast("맞춤 자소서가 저장되었습니다.")
-                }
+                onClick={() => showToast("맞춤 자소서가 저장되었습니다.")}
                 className="rounded-full bg-blue-600 px-[18px] py-3 text-[14px] font-black text-white transition-colors hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
               >
                 자소서 저장

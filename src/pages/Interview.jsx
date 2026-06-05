@@ -1,8 +1,11 @@
 import { Link, useSearchParams } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
-
-const INTERVIEW_RESULT_KEY = "articlue_interview_results";
-const THEME_KEY = "articlue-theme";
+import {
+  getInterviewTarget,
+  saveInterviewResult as saveInterviewResultToService,
+} from "../services/interviewService.js";
+import { getTheme } from "../services/profileService.js";
+import { notifyCareerScoreChanged } from "../utils/careerScore.js";
 
 const companyOptions = [
   "네이버웹툰 - Backend",
@@ -40,7 +43,7 @@ export default function Interview() {
 
   useEffect(() => {
     const syncDarkMode = () => {
-      const savedTheme = localStorage.getItem(THEME_KEY) || "light";
+      const savedTheme = getTheme();
       const shouldUseDarkMode = savedTheme === "dark";
 
       document.documentElement.classList.toggle("dark", shouldUseDarkMode);
@@ -94,11 +97,10 @@ export default function Interview() {
       }
     }
 
-    const savedCompany = localStorage.getItem("articlue_interview_company");
-    const savedRole = localStorage.getItem("articlue_interview_role");
+    const savedTarget = getInterviewTarget();
 
-    if (savedCompany) {
-      setCompany(`${savedCompany} - ${savedRole || "Backend"}`);
+    if (savedTarget.company) {
+      setCompany(`${savedTarget.company} - ${savedTarget.role || "Backend"}`);
     }
   }, [searchParams]);
 
@@ -152,19 +154,8 @@ export default function Interview() {
       createdAt: new Date().toISOString(),
     };
 
-    try {
-      const saved = JSON.parse(
-        localStorage.getItem(INTERVIEW_RESULT_KEY) || "[]"
-      );
-
-      const next = Array.isArray(saved)
-        ? [resultData, ...saved]
-        : [resultData];
-
-      localStorage.setItem(INTERVIEW_RESULT_KEY, JSON.stringify(next));
-    } catch {
-      localStorage.setItem(INTERVIEW_RESULT_KEY, JSON.stringify([resultData]));
-    }
+    saveInterviewResultToService(resultData);
+    notifyCareerScoreChanged();
   };
 
   const resetSettings = () => {
