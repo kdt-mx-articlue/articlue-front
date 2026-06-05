@@ -28,3 +28,7 @@ export function clamp(value) {
   if (!Number.isFinite(number)) return 0;
   return Math.min(100, Math.max(0, Math.round(number)));
 }
+
+export function markRecommendationViewed(source = "main_home") {
+  writeString("articlue_recommendation_entry", source);
+}

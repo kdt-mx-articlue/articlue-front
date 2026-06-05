@@ -6,24 +6,27 @@ import {
   getNextAction,
   getReadinessStatus,
   getTechStacks,
-  readJson,
 } from "../utils/careerScore.js";
-
-const FAVORITE_KEY = "articlue_favorite_jobs";
-const COVER_LETTER_KEY = "articlue_cover_letters";
-const INTERVIEW_RESULT_KEY = "articlue_interview_results";
+import { markRecommendationViewed } from "../services/careerDataService.js";
+import {
+  getFavoriteJobs,
+  getFavoriteCount,
+} from "../services/favoriteJobService.js";
+import { getCoverLetters } from "../services/coverLetterService.js";
+import {
+  getInterviewResults,
+  getLatestInterviewSummary,
+} from "../services/interviewService.js";
+import {
+  isResumeSubmitted,
+  markResumeContinue,
+} from "../services/resumeService.js";
 
 const fallbackCompanies = [
   ["NW", "네이버웹툰 · Backend", "Redis · 대용량 트래픽 · API 설계", "92%"],
   ["TS", "토스 · Server", "결제 안정성 · 데이터 처리 · 성능 개선", "88%"],
   ["KK", "카카오 · Platform", "분산 시스템 · 백엔드 운영 · 모니터링", "84%"],
 ];
-
-function clamp(value) {
-  const number = Number(value);
-  if (!Number.isFinite(number)) return 0;
-  return Math.min(100, Math.max(0, Math.round(number)));
-}
 
 function formatDate(value) {
   if (!value) return "최근 기록";
@@ -44,73 +47,29 @@ function formatDate(value) {
 
 function getTimestamp(value) {
   if (!value) return 0;
+
   const time = new Date(value).getTime();
   return Number.isNaN(time) ? 0 : time;
 }
 
-function readFavoriteJobs() {
-  const data = readJson(FAVORITE_KEY, []);
-  if (!Array.isArray(data)) return [];
-
-  return data.map((job) => ({
-    logo: String(job.company || job.name || "기업").slice(0, 2).toUpperCase(),
-    title: `${job.company || job.name || "기업명 없음"} · ${
-      job.role || job.position || "직무 정보 없음"
-    }`,
-    company: job.company || job.name || "기업명 없음",
-    role: job.role || job.position || "직무 정보 없음",
+function buildFavoriteCompanies() {
+  return getFavoriteJobs().map((job) => ({
+    logo: String(job.company || "기업").slice(0, 2).toUpperCase(),
+    title: `${job.company || "기업명 없음"} · ${job.role || "직무 정보 없음"}`,
+    company: job.company || "기업명 없음",
+    role: job.role || "직무 정보 없음",
     desc:
       job.desc ||
-      job.description ||
       (Array.isArray(job.stacks) ? job.stacks.join(" · ") : "관심 기업 공고"),
-    score: `${clamp(job.match || job.score || job.matchRate || 80)}%`,
-    path: `/fitting?company=${encodeURIComponent(
-      job.company || job.name || ""
-    )}`,
+    score: job.match || "80%",
+    path: `/fitting?company=${encodeURIComponent(job.company || "")}`,
   }));
-}
-
-function getLatestInterviewSummary() {
-  const results = readJson(INTERVIEW_RESULT_KEY, []);
-  if (!Array.isArray(results) || results.length === 0) {
-    return {
-      value: "기록 없음",
-      desc: "면접을 완료하면 최근 면접 준비 기록이 표시됩니다.",
-    };
-  }
-
-  const latest = [...results].sort((a, b) => {
-    const aTime = new Date(a.createdAt || 0).getTime();
-    const bTime = new Date(b.createdAt || 0).getTime();
-    return bTime - aTime;
-  })[0];
-
-  return {
-    value: latest.company || "최근 면접",
-    desc: `${latest.role || "면접"} · 종합 ${latest.score ?? 0}점`,
-  };
-}
-
-function readCoverLetters() {
-  const parsed = readJson(COVER_LETTER_KEY, {});
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return [];
-
-  return Object.entries(parsed).map(([companyId, content]) => ({
-    id: companyId,
-    company: content?.company || companyId,
-    savedAt: content?.savedAt || null,
-  }));
-}
-
-function readInterviewResults() {
-  const parsed = readJson(INTERVIEW_RESULT_KEY, []);
-  return Array.isArray(parsed) ? parsed : [];
 }
 
 function buildRecentActivities() {
-  const favorites = readFavoriteJobs();
-  const coverLetters = readCoverLetters();
-  const interviewResults = readInterviewResults();
+  const favorites = buildFavoriteCompanies();
+  const coverLetters = getCoverLetters();
+  const interviewResults = getInterviewResults();
   const techStacks = getTechStacks();
 
   const items = [];
@@ -173,7 +132,7 @@ export default function Home() {
   const [careerScores, setCareerScores] = useState(() => getCareerScores());
   const [nextAction, setNextAction] = useState(() => getNextAction());
   const [favoriteCompanies, setFavoriteCompanies] = useState(() =>
-    readFavoriteJobs()
+    buildFavoriteCompanies()
   );
   const [latestInterview, setLatestInterview] = useState(() =>
     getLatestInterviewSummary()
@@ -183,7 +142,6 @@ export default function Home() {
     buildRecentActivities()
   );
 
-  const progress = careerScores.resume;
   const overall = careerScores.overall;
   const readinessStatus = getReadinessStatus(overall);
 
@@ -243,47 +201,37 @@ export default function Home() {
 
   const refreshHomeData = () => {
     const nextScores = getCareerScores();
-    const favorites = readFavoriteJobs();
+    const favorites = buildFavoriteCompanies();
 
     setCareerScores(nextScores);
     setNextAction(getNextAction());
     setFavoriteCompanies(favorites);
-    setFavoriteCount(favorites.length);
+    setFavoriteCount(getFavoriteCount());
     setLatestInterview(getLatestInterviewSummary());
     setTechStacks(getTechStacks());
     setRecentActivities(buildRecentActivities());
-
-    const submitted =
-      localStorage.getItem("articlue_resume_submitted") === "true";
-
-    setShowBanner(!submitted);
+    setShowBanner(!isResumeSubmitted());
   };
 
   useEffect(() => {
     refreshHomeData();
 
-    const handleFocus = () => {
+    const handleRefresh = () => {
       refreshHomeData();
     };
 
-    const handleStorage = () => {
-      refreshHomeData();
-    };
-
-    const handleCareerScoreChanged = () => {
-      refreshHomeData();
-    };
-
-    window.addEventListener("focus", handleFocus);
-    window.addEventListener("storage", handleStorage);
-    window.addEventListener("careerScoreChanged", handleCareerScoreChanged);
-    window.addEventListener("articlue:career-score-changed", handleCareerScoreChanged);
+    window.addEventListener("focus", handleRefresh);
+    window.addEventListener("storage", handleRefresh);
+    window.addEventListener("careerScoreChanged", handleRefresh);
+    window.addEventListener("articlue:career-score-changed", handleRefresh);
+    window.addEventListener("articlue-career-score-change", handleRefresh);
 
     return () => {
-      window.removeEventListener("focus", handleFocus);
-      window.removeEventListener("storage", handleStorage);
-      window.removeEventListener("careerScoreChanged", handleCareerScoreChanged);
-      window.removeEventListener("articlue:career-score-changed", handleCareerScoreChanged);
+      window.removeEventListener("focus", handleRefresh);
+      window.removeEventListener("storage", handleRefresh);
+      window.removeEventListener("careerScoreChanged", handleRefresh);
+      window.removeEventListener("articlue:career-score-changed", handleRefresh);
+      window.removeEventListener("articlue-career-score-change", handleRefresh);
     };
   }, []);
 
@@ -291,12 +239,8 @@ export default function Home() {
     setShowBanner(false);
   };
 
-  const markRecommendationViewed = () => {
-    localStorage.setItem("articlue_recommendation_entry", "main_home");
-  };
-
-  const continueResume = () => {
-    localStorage.setItem("articlue_resume_continue", "true");
+  const handleRecommendationViewed = () => {
+    markRecommendationViewed("main_home");
   };
 
   return (
@@ -316,7 +260,7 @@ export default function Home() {
           <div className="flex shrink-0 items-center gap-2">
             <Link
               to="/resume"
-              onClick={continueResume}
+              onClick={markResumeContinue}
               className="inline-flex rounded-full border border-blue-600 px-[19px] py-3 text-[14px] font-black text-blue-700 transition hover:-translate-y-0.5 dark:text-blue-300"
             >
               이력서 보완하기
@@ -484,7 +428,7 @@ export default function Home() {
 
             <Link
               to="/fitting"
-              onClick={markRecommendationViewed}
+              onClick={handleRecommendationViewed}
               className="text-[13px] font-black text-blue-700 dark:text-blue-300"
             >
               전체 보기 →

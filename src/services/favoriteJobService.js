@@ -38,12 +38,17 @@ export function normalizeFavoriteJobs(jobs) {
 export function getFavoriteJobs() {
   for (const key of FAVORITE_KEYS) {
     const data = readJson(key, []);
+
     if (Array.isArray(data) && data.length > 0) {
       return normalizeFavoriteJobs(data);
     }
   }
 
   return [];
+}
+
+export function getFavoriteCount() {
+  return getFavoriteJobs().length;
 }
 
 export function saveFavoriteJobs(jobs) {

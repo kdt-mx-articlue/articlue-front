@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { openAddressSearch } from "../utils/postcode.js";
+import { saveAuthUser } from "../utils/auth.js";
+import { signup } from "../services/authApi.js";
 
 const USER_PROFILE_KEY = "articlue_user_profile";
 const PROFILE_NAME_KEY = "articlue_profile_name";
@@ -24,6 +26,7 @@ export default function Signup() {
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [toast, setToast] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const passwordStatus = useMemo(() => {
     return {
@@ -41,18 +44,34 @@ export default function Signup() {
 
   const strength = useMemo(() => {
     if (passedCount <= 1) {
-      return { percent: passedCount * 25, text: "비밀번호 강도: 매우 약함", color: "bg-red-500" };
+      return {
+        percent: passedCount * 25,
+        text: "비밀번호 강도: 매우 약함",
+        color: "bg-red-500",
+      };
     }
 
     if (passedCount === 2) {
-      return { percent: 50, text: "비밀번호 강도: 보통", color: "bg-amber-500" };
+      return {
+        percent: 50,
+        text: "비밀번호 강도: 보통",
+        color: "bg-amber-500",
+      };
     }
 
     if (passedCount === 3) {
-      return { percent: 75, text: "비밀번호 강도: 좋음", color: "bg-blue-600" };
+      return {
+        percent: 75,
+        text: "비밀번호 강도: 좋음",
+        color: "bg-blue-600",
+      };
     }
 
-    return { percent: 100, text: "비밀번호 강도: 안전함", color: "bg-emerald-500" };
+    return {
+      percent: 100,
+      text: "비밀번호 강도: 안전함",
+      color: "bg-emerald-500",
+    };
   }, [passedCount]);
 
   const showToast = (message) => {
@@ -68,12 +87,12 @@ export default function Signup() {
     }
   };
 
-  const saveUser = (user) => {
+  const saveUserFallback = (user) => {
     const users = getSavedUsers();
     localStorage.setItem("articlue_users", JSON.stringify([...users, user]));
   };
 
-  const saveSignupLoginState = (userProfile) => {
+  const saveSignupLoginStateFallback = (userProfile) => {
     const loginAt = Date.now();
 
     const currentUser = {
@@ -100,8 +119,55 @@ export default function Signup() {
     });
   };
 
-  const handleSignup = (event) => {
+  const PasswordRule = ({ valid, children }) => {
+    return (
+      <p
+        className={`text-xs font-extrabold leading-7 ${
+          valid ? "text-emerald-600" : "text-red-500"
+        }`}
+      >
+        {children}
+      </p>
+    );
+  };
+
+  const validateForm = () => {
+    const trimmedName = name.trim();
+    const trimmedNickname = nickname.trim();
+    const normalizedEmail = email.trim().toLowerCase();
+    const trimmedPhone = phone.trim();
+    const trimmedPostcode = postcode.trim();
+    const trimmedAddress = address.trim();
+    const trimmedDetailAddress = detailAddress.trim();
+
+    if (!trimmedName) return showToast("이름을 입력해 주세요.");
+    if (!trimmedNickname) return showToast("닉네임을 입력해 주세요.");
+    if (!normalizedEmail) return showToast("이메일을 입력해 주세요.");
+    if (!trimmedPhone) return showToast("전화번호를 입력해 주세요.");
+    if (!birth) return showToast("생년월일을 입력해 주세요.");
+    if (!trimmedPostcode || !trimmedAddress) {
+      return showToast("주소 검색을 진행해 주세요.");
+    }
+    if (!trimmedDetailAddress) return showToast("상세주소를 입력해 주세요.");
+    if (!gender) return showToast("성별을 선택해 주세요.");
+    if (!military) return showToast("병역여부를 선택해 주세요.");
+
+    if (!isStrongPassword) {
+      return showToast("안전한 비밀번호 조건을 모두 충족해 주세요.");
+    }
+
+    if (!isPasswordMatched) {
+      return showToast("비밀번호 확인이 일치하지 않습니다.");
+    }
+
+    return true;
+  };
+
+  const handleSignup = async (event) => {
     event.preventDefault();
+
+    const valid = validateForm();
+    if (valid !== true) return;
 
     const trimmedName = name.trim();
     const trimmedNickname = nickname.trim();
@@ -111,35 +177,9 @@ export default function Signup() {
     const trimmedAddress = address.trim();
     const trimmedDetailAddress = detailAddress.trim();
 
-    const fullAddress = [trimmedAddress, trimmedDetailAddress].filter(Boolean).join(" ");
-
-    if (!trimmedName) return showToast("이름을 입력해 주세요.");
-    if (!trimmedNickname) return showToast("닉네임을 입력해 주세요.");
-    if (!normalizedEmail) return showToast("이메일을 입력해 주세요.");
-    if (!trimmedPhone) return showToast("전화번호를 입력해 주세요.");
-    if (!birth) return showToast("생년월일을 입력해 주세요.");
-    if (!trimmedPostcode || !trimmedAddress) return showToast("주소 검색을 진행해 주세요.");
-    if (!trimmedDetailAddress) return showToast("상세주소를 입력해 주세요.");
-    if (!gender) return showToast("성별을 선택해 주세요.");
-    if (!military) return showToast("병역여부를 선택해 주세요.");
-
-    if (!isStrongPassword) {
-      showToast("안전한 비밀번호 조건을 모두 충족해 주세요.");
-      return;
-    }
-
-    if (!isPasswordMatched) {
-      showToast("비밀번호 확인이 일치하지 않습니다.");
-      return;
-    }
-
-    const users = getSavedUsers();
-    const duplicatedUser = users.some((user) => user.email === normalizedEmail);
-
-    if (duplicatedUser) {
-      showToast("이미 가입된 이메일입니다. 로그인해 주세요.");
-      return;
-    }
+    const fullAddress = [trimmedAddress, trimmedDetailAddress]
+      .filter(Boolean)
+      .join(" ");
 
     const userProfile = {
       name: trimmedName,
@@ -156,26 +196,77 @@ export default function Signup() {
       createdAt: new Date().toISOString(),
     };
 
-    saveUser({
-      ...userProfile,
+    const signupPayload = {
+      name: trimmedName,
+      nickname: trimmedNickname,
+      email: normalizedEmail,
       password,
-    });
+      phone: trimmedPhone,
+      birth,
+      postcode: trimmedPostcode,
+      address: fullAddress,
+      baseAddress: trimmedAddress,
+      detailAddress: trimmedDetailAddress,
+      gender,
+      military,
+    };
 
-    saveSignupLoginState(userProfile);
+    setLoading(true);
 
-    showToast("회원가입이 완료되었습니다. 홈으로 이동합니다.");
+    try {
+      const data = await signup(signupPayload);
+      const user = data?.member || data?.user || data?.data || data || {};
 
-    setTimeout(() => {
-      navigate("/home", { replace: true });
-    }, 800);
-  };
+      saveAuthUser({
+        name: user?.name || trimmedName,
+        nickname: user?.nickname || trimmedNickname,
+        email: user?.email || normalizedEmail,
+        loginType: "local",
+        provider: "local",
+        loginAt: new Date().toISOString(),
+      });
 
-  const PasswordRule = ({ valid, children }) => {
-    return (
-      <p className={`text-xs font-extrabold leading-7 ${valid ? "text-emerald-600" : "text-red-500"}`}>
-        {children}
-      </p>
-    );
+      localStorage.setItem(PROFILE_NAME_KEY, user?.name || trimmedName);
+      localStorage.setItem(
+        USER_PROFILE_KEY,
+        JSON.stringify({
+          ...userProfile,
+          ...user,
+        })
+      );
+
+      showToast("회원가입이 완료되었습니다. 홈으로 이동합니다.");
+
+      setTimeout(() => {
+        navigate("/home", { replace: true });
+      }, 800);
+    } catch (error) {
+      console.warn("API 회원가입 실패. 시연용 localStorage 회원가입으로 전환합니다.", error);
+
+      const users = getSavedUsers();
+      const duplicatedUser = users.some((user) => user.email === normalizedEmail);
+
+      if (duplicatedUser) {
+        showToast("이미 가입된 이메일입니다. 로그인해 주세요.");
+        setLoading(false);
+        return;
+      }
+
+      saveUserFallback({
+        ...userProfile,
+        password,
+      });
+
+      saveSignupLoginStateFallback(userProfile);
+
+      showToast("회원가입이 완료되었습니다. 홈으로 이동합니다.");
+
+      setTimeout(() => {
+        navigate("/home", { replace: true });
+      }, 800);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const inputClass =
@@ -205,7 +296,10 @@ export default function Signup() {
         <form onSubmit={handleSignup}>
           <div className="grid grid-cols-2 gap-4">
             <div className="mb-[18px]">
-              <label htmlFor="signupNameInput" className="mb-2 block text-sm font-extrabold text-slate-900">
+              <label
+                htmlFor="signupNameInput"
+                className="mb-2 block text-sm font-extrabold text-slate-900"
+              >
                 이름
               </label>
               <input
@@ -221,7 +315,10 @@ export default function Signup() {
             </div>
 
             <div className="mb-[18px]">
-              <label htmlFor="signupNicknameInput" className="mb-2 block text-sm font-extrabold text-slate-900">
+              <label
+                htmlFor="signupNicknameInput"
+                className="mb-2 block text-sm font-extrabold text-slate-900"
+              >
                 닉네임
               </label>
               <input
@@ -236,7 +333,10 @@ export default function Signup() {
             </div>
 
             <div className="mb-[18px]">
-              <label htmlFor="signupEmailInput" className="mb-2 block text-sm font-extrabold text-slate-900">
+              <label
+                htmlFor="signupEmailInput"
+                className="mb-2 block text-sm font-extrabold text-slate-900"
+              >
                 이메일
               </label>
               <input
@@ -252,7 +352,10 @@ export default function Signup() {
             </div>
 
             <div className="mb-[18px]">
-              <label htmlFor="signupPhoneInput" className="mb-2 block text-sm font-extrabold text-slate-900">
+              <label
+                htmlFor="signupPhoneInput"
+                className="mb-2 block text-sm font-extrabold text-slate-900"
+              >
                 전화번호
               </label>
               <input
@@ -268,7 +371,10 @@ export default function Signup() {
             </div>
 
             <div className="mb-[18px]">
-              <label htmlFor="signupBirthInput" className="mb-2 block text-sm font-extrabold text-slate-900">
+              <label
+                htmlFor="signupBirthInput"
+                className="mb-2 block text-sm font-extrabold text-slate-900"
+              >
                 생년월일
               </label>
               <input
@@ -282,7 +388,10 @@ export default function Signup() {
             </div>
 
             <div className="mb-[18px]">
-              <label htmlFor="signupGenderInput" className="mb-2 block text-sm font-extrabold text-slate-900">
+              <label
+                htmlFor="signupGenderInput"
+                className="mb-2 block text-sm font-extrabold text-slate-900"
+              >
                 성별
               </label>
               <select
@@ -300,7 +409,10 @@ export default function Signup() {
             </div>
 
             <div className="mb-[18px]">
-              <label htmlFor="signupMilitaryInput" className="mb-2 block text-sm font-extrabold text-slate-900">
+              <label
+                htmlFor="signupMilitaryInput"
+                className="mb-2 block text-sm font-extrabold text-slate-900"
+              >
                 병역여부
               </label>
               <select
@@ -318,7 +430,10 @@ export default function Signup() {
             </div>
 
             <div className="mb-[18px]">
-              <label htmlFor="signupPostcodeInput" className="mb-2 block text-sm font-extrabold text-slate-900">
+              <label
+                htmlFor="signupPostcodeInput"
+                className="mb-2 block text-sm font-extrabold text-slate-900"
+              >
                 우편번호
               </label>
 
@@ -344,7 +459,10 @@ export default function Signup() {
             </div>
 
             <div className="col-span-2 mb-[18px]">
-              <label htmlFor="signupAddressInput" className="mb-2 block text-sm font-extrabold text-slate-900">
+              <label
+                htmlFor="signupAddressInput"
+                className="mb-2 block text-sm font-extrabold text-slate-900"
+              >
                 주소
               </label>
               <input
@@ -359,7 +477,10 @@ export default function Signup() {
             </div>
 
             <div className="col-span-2 mb-[18px]">
-              <label htmlFor="signupDetailAddressInput" className="mb-2 block text-sm font-extrabold text-slate-900">
+              <label
+                htmlFor="signupDetailAddressInput"
+                className="mb-2 block text-sm font-extrabold text-slate-900"
+              >
                 상세주소
               </label>
               <input
@@ -374,9 +495,11 @@ export default function Signup() {
             </div>
           </div>
 
-          {/* 기존 비밀번호 영역은 그대로 유지 */}
           <div className="mb-[18px]">
-            <label htmlFor="passwordInput" className="mb-2 block text-sm font-extrabold text-slate-900">
+            <label
+              htmlFor="passwordInput"
+              className="mb-2 block text-sm font-extrabold text-slate-900"
+            >
               비밀번호
             </label>
 
@@ -396,7 +519,10 @@ export default function Signup() {
               required
             />
 
-            <div className="mt-2.5 rounded-2xl border border-slate-200 bg-slate-100 px-3.5 py-3" aria-live="polite">
+            <div
+              className="mt-2.5 rounded-2xl border border-slate-200 bg-slate-100 px-3.5 py-3"
+              aria-live="polite"
+            >
               <p className="mb-2 text-[13px] font-black text-slate-900">
                 안전한 비밀번호 조건
               </p>
@@ -404,7 +530,9 @@ export default function Signup() {
               <PasswordRule valid={passwordStatus.length}>• 8자 이상 입력</PasswordRule>
               <PasswordRule valid={passwordStatus.lower}>• 영문 소문자 포함</PasswordRule>
               <PasswordRule valid={passwordStatus.number}>• 숫자 포함</PasswordRule>
-              <PasswordRule valid={passwordStatus.special}>• 특수문자 포함 (!@#$%^&* 등)</PasswordRule>
+              <PasswordRule valid={passwordStatus.special}>
+                • 특수문자 포함 (!@#$%^&* 등)
+              </PasswordRule>
 
               <div className="mt-2.5">
                 <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
@@ -428,7 +556,10 @@ export default function Signup() {
           </div>
 
           <div className="mb-[18px]">
-            <label htmlFor="passwordConfirmInput" className="mb-2 block text-sm font-extrabold text-slate-900">
+            <label
+              htmlFor="passwordConfirmInput"
+              className="mb-2 block text-sm font-extrabold text-slate-900"
+            >
               비밀번호 확인
             </label>
 
@@ -456,9 +587,10 @@ export default function Signup() {
 
           <button
             type="submit"
-            className="mt-2.5 h-[54px] w-full rounded-full bg-blue-600 text-[15px] font-black text-white transition hover:bg-blue-700"
+            disabled={loading}
+            className="mt-2.5 h-[54px] w-full rounded-full bg-blue-600 text-[15px] font-black text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            회원가입 후 바로 시작하기
+            {loading ? "회원가입 중..." : "회원가입 후 바로 시작하기"}
           </button>
         </form>
 
@@ -472,7 +604,9 @@ export default function Signup() {
 
       <div
         className={`fixed bottom-7 right-7 rounded-full bg-slate-900 px-5 py-3 text-sm font-extrabold text-white transition-all duration-200 ${
-          toast ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-5 opacity-0"
+          toast
+            ? "translate-y-0 opacity-100"
+            : "pointer-events-none translate-y-5 opacity-0"
         }`}
       >
         {toast || "회원가입이 완료되었습니다."}

@@ -28,11 +28,55 @@ import {
   getUserProfile,
   saveProfileImage,
   saveTheme,
-  saveUserProfile,
+  saveUserProfile as saveUserProfileLocal,
   USER_PROFILE_KEY,
   PROFILE_NAME_KEY,
 } from "../services/profileService.js";
+import {
+  getProfile,
+  createProfile,
+  updateProfile as updateProfileApi,
+} from "../services/profileApi.js";
 
+
+function normalizeProfileResponse(data, fallbackProfile) {
+  const profile = data?.profile || data?.memberProfile || data?.data || data || {};
+
+  return {
+    ...fallbackProfile,
+    ...profile,
+    name: profile?.name || fallbackProfile?.name || "사용자",
+    nickname: profile?.nickname || fallbackProfile?.nickname || "",
+    email: profile?.email || fallbackProfile?.email || "",
+    phone: profile?.phone || fallbackProfile?.phone || "",
+    birth: profile?.birth || fallbackProfile?.birth || "",
+    postcode: profile?.postcode || fallbackProfile?.postcode || "",
+    address: profile?.address || fallbackProfile?.address || "",
+    baseAddress:
+      profile?.baseAddress ||
+      profile?.address ||
+      fallbackProfile?.baseAddress ||
+      fallbackProfile?.address ||
+      "",
+    detailAddress: profile?.detailAddress || fallbackProfile?.detailAddress || "",
+    gender: profile?.gender || fallbackProfile?.gender || "",
+    military: profile?.military || fallbackProfile?.military || "",
+  };
+}
+
+async function readUserProfileFromApiFirst() {
+  const fallbackProfile = getUserProfile();
+
+  try {
+    const data = await getProfile();
+    const apiProfile = normalizeProfileResponse(data, fallbackProfile);
+    saveUserProfileLocal(apiProfile);
+    return apiProfile;
+  } catch (error) {
+    console.warn("프로필 API 조회 실패. localStorage 프로필로 대체합니다.", error);
+    return fallbackProfile;
+  }
+}
 
 function readUserProfile() {
   return getUserProfile();
@@ -227,8 +271,8 @@ export default function MyPage() {
 
   const profileName = userProfile.name || "사용자";
 
-  const refreshPageData = () => {
-    const nextProfile = readUserProfile();
+  const refreshPageData = async () => {
+    const nextProfile = await readUserProfileFromApiFirst();
 
     setFavorites(readFavoriteJobs());
     setInterviewResults(readInterviewResults());
@@ -427,7 +471,7 @@ export default function MyPage() {
     });
   };
 
-  const saveUserProfile = () => {
+  const handleSaveUserProfile = async () => {
     const trimmedBaseAddress = (profileDraft.baseAddress || "").trim();
     const trimmedDetailAddress = (profileDraft.detailAddress || "").trim();
 
@@ -458,7 +502,21 @@ export default function MyPage() {
       return;
     }
 
-    saveUserProfile(nextProfile);
+    try {
+      await updateProfileApi(nextProfile);
+      saveUserProfileLocal(nextProfile);
+    } catch (updateError) {
+      try {
+        await createProfile(nextProfile);
+        saveUserProfileLocal(nextProfile);
+      } catch (createError) {
+        console.warn(
+          "프로필 API 저장 실패. localStorage 프로필 저장으로 대체합니다.",
+          { updateError, createError }
+        );
+        saveUserProfileLocal(nextProfile);
+      }
+    }
 
     const currentUser = getCurrentUser();
     if (currentUser) {
@@ -765,7 +823,7 @@ export default function MyPage() {
                     <>
                       <button
                         type="button"
-                        onClick={saveUserProfile}
+                        onClick={handleSaveUserProfile}
                         className="rounded-full border border-blue-600 bg-blue-600 px-3 py-2 text-[12px] font-black text-white"
                       >
                         저장

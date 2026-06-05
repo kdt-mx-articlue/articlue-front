@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { saveAuthUser } from "../utils/auth.js";
+import { login } from "../services/authApi.js";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -11,13 +12,11 @@ export default function Login() {
   const [emailError, setEmailError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
   const [toast, setToast] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const showToast = (message) => {
     setToast(message);
-
-    setTimeout(() => {
-      setToast("");
-    }, 2500);
+    setTimeout(() => setToast(""), 2500);
   };
 
   const getSavedUsers = () => {
@@ -28,13 +27,13 @@ export default function Login() {
     }
   };
 
-  const handleLogin = (event) => {
-    event.preventDefault();
+  const moveAfterLogin = () => {
+    const redirectPath = localStorage.getItem("redirectAfterLogin") || "/resume";
+    localStorage.removeItem("redirectAfterLogin");
+    navigate(redirectPath, { replace: true });
+  };
 
-    setEmailError(false);
-    setPasswordError(false);
-
-    const normalizedEmail = email.trim().toLowerCase();
+  const loginWithFallback = (normalizedEmail) => {
     const users = getSavedUsers();
 
     const matchedUser = users.find(
@@ -44,19 +43,17 @@ export default function Login() {
     if (!matchedUser) {
       setEmailError(true);
       showToast("가입된 회원 정보가 없습니다. 회원가입 후 이용해 주세요.");
-      return;
+      return false;
     }
 
     if (matchedUser.password !== password) {
       setPasswordError(true);
       showToast("비밀번호가 일치하지 않습니다.");
-      return;
+      return false;
     }
 
-    const userName = matchedUser.name || "Articlue 사용자";
-
     saveAuthUser({
-      name: userName,
+      name: matchedUser.name || "Articlue 사용자",
       email: matchedUser.email,
       loginType: "local",
       provider: "local",
@@ -65,14 +62,56 @@ export default function Login() {
 
     showToast("로그인 되었습니다.");
 
-    setTimeout(() => {
-      const redirectPath =
-        localStorage.getItem("redirectAfterLogin") || "/resume";
+    setTimeout(moveAfterLogin, 800);
+    return true;
+  };
 
-      localStorage.removeItem("redirectAfterLogin");
+  const handleLogin = async (event) => {
+    event.preventDefault();
 
-      navigate(redirectPath, { replace: true });
-    }, 1000);
+    setEmailError(false);
+    setPasswordError(false);
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!normalizedEmail) {
+      setEmailError(true);
+      showToast("이메일을 입력해 주세요.");
+      return;
+    }
+
+    if (!password) {
+      setPasswordError(true);
+      showToast("비밀번호를 입력해 주세요.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const data = await login({
+        email: normalizedEmail,
+        password,
+      });
+
+      const user = data?.member || data?.user || data?.data || data || {};
+
+      saveAuthUser({
+        name: user?.name || user?.nickname || "Articlue 사용자",
+        email: user?.email || normalizedEmail,
+        loginType: "local",
+        provider: "local",
+        loginAt: new Date().toISOString(),
+      });
+
+      showToast("로그인 되었습니다.");
+      setTimeout(moveAfterLogin, 800);
+    } catch (error) {
+      console.warn("API 로그인 실패. 시연용 localStorage 로그인으로 전환합니다.", error);
+      loginWithFallback(normalizedEmail);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const showSocialLoginNotice = () => {
@@ -198,9 +237,10 @@ export default function Login() {
 
           <button
             type="submit"
-            className="mt-[10px] h-[54px] w-full rounded-full border-0 bg-[#2563eb] text-[15px] font-black text-white transition hover:bg-[#1d4ed8]"
+            disabled={loading}
+            className="mt-[10px] h-[54px] w-full rounded-full border-0 bg-[#2563eb] text-[15px] font-black text-white transition hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            로그인
+            {loading ? "로그인 중..." : "로그인"}
           </button>
 
           <div className="mt-5">
@@ -214,13 +254,9 @@ export default function Login() {
                 aria-label="카카오톡 로그인"
                 title="카카오톡 로그인"
                 onClick={handleKakaoLogin}
-                className="relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-[#e2e8f0] bg-white text-[#0f172a] shadow-[0_6px_18px_rgba(15,23,42,0.04)] transition hover:-translate-y-0.5 hover:bg-[#f1f5f9] hover:shadow-[0_10px_24px_rgba(15,23,42,0.08)]"
+                className="relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-[#e2e8f0] bg-white text-[#0f172a] shadow-[0_6px_18px_rgba(15,23,42,0.04)] transition hover:-translate-y-0.5 hover:bg-[#f1f5f9]"
               >
-                <svg
-                  className="block h-6 w-6"
-                  viewBox="0 0 48 48"
-                  aria-hidden="true"
-                >
+                <svg className="block h-6 w-6" viewBox="0 0 48 48" aria-hidden="true">
                   <circle cx="24" cy="24" r="22" fill="#FEE500" />
                   <path
                     d="M24 13.5c-7.2 0-13 4.4-13 9.8 0 3.5 2.4 6.5 6 8.2l-1.2 4.5c-.1.5.4.9.8.6l5.2-3.5c.7.1 1.5.2 2.2.2 7.2 0 13-4.4 13-9.8s-5.8-10-13-10z"
@@ -234,13 +270,9 @@ export default function Login() {
                 aria-label="네이버 로그인"
                 title="네이버 로그인"
                 onClick={handleNaverLogin}
-                className="relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-[#e2e8f0] bg-white text-[#0f172a] shadow-[0_6px_18px_rgba(15,23,42,0.04)] transition hover:-translate-y-0.5 hover:bg-[#f1f5f9] hover:shadow-[0_10px_24px_rgba(15,23,42,0.08)]"
+                className="relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-[#e2e8f0] bg-white text-[#0f172a] shadow-[0_6px_18px_rgba(15,23,42,0.04)] transition hover:-translate-y-0.5 hover:bg-[#f1f5f9]"
               >
-                <svg
-                  className="block h-6 w-6"
-                  viewBox="0 0 48 48"
-                  aria-hidden="true"
-                >
+                <svg className="block h-6 w-6" viewBox="0 0 48 48" aria-hidden="true">
                   <circle cx="24" cy="24" r="22" fill="#03C75A" />
                   <path
                     d="M28.8 24.7 19 10.5h-8.1v27h8.3V23.3l9.8 14.2h8.1v-27h-8.3v14.2z"
@@ -249,73 +281,35 @@ export default function Login() {
                 </svg>
               </button>
 
-              <button
-                type="button"
-                aria-label="구글 로그인"
-                title="구글 로그인"
-                onClick={showSocialLoginNotice}
-                className="relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-[#e2e8f0] bg-white text-[#0f172a] shadow-[0_6px_18px_rgba(15,23,42,0.04)] transition hover:-translate-y-0.5 hover:bg-[#f1f5f9] hover:shadow-[0_10px_24px_rgba(15,23,42,0.08)]"
-              >
-                <svg
-                  className="block h-6 w-6"
-                  viewBox="0 0 48 48"
-                  aria-hidden="true"
+              {["구글 로그인", "GitHub 로그인"].map((label) => (
+                <button
+                  key={label}
+                  type="button"
+                  aria-label={label}
+                  title={label}
+                  onClick={showSocialLoginNotice}
+                  className="relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-[#e2e8f0] bg-white text-[#0f172a] shadow-[0_6px_18px_rgba(15,23,42,0.04)] transition hover:-translate-y-0.5 hover:bg-[#f1f5f9]"
                 >
-                  <path
-                    fill="#FFC107"
-                    d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.1 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"
-                  />
-                  <path
-                    fill="#FF3D00"
-                    d="M6.3 14.7l6.6 4.8C14.6 15.1 18.9 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.1 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"
-                  />
-                  <path
-                    fill="#4CAF50"
-                    d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.3 35.1 26.8 36 24 36c-5.3 0-9.7-3.3-11.3-7.9l-6.5 5C9.5 39.5 16.2 44 24 44z"
-                  />
-                  <path
-                    fill="#1976D2"
-                    d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.2-4.1 5.6l6.2 5.2C40.9 35.6 44 30 44 24c0-1.3-.1-2.4-.4-3.5z"
-                  />
-                </svg>
-                <span className="absolute right-[5px] top-1 h-2 w-2 rounded-full border-2 border-white bg-[#f59e0b]" />
-              </button>
-
-              <button
-                type="button"
-                aria-label="GitHub 로그인"
-                title="GitHub 로그인"
-                onClick={showSocialLoginNotice}
-                className="relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-[#e2e8f0] bg-white text-[#0f172a] shadow-[0_6px_18px_rgba(15,23,42,0.04)] transition hover:-translate-y-0.5 hover:bg-[#f1f5f9] hover:shadow-[0_10px_24px_rgba(15,23,42,0.08)]"
-              >
-                <svg
-                  className="block h-[25px] w-[25px]"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path
-                    fill="currentColor"
-                    d="M12 .5C5.7.5.6 5.6.6 11.9c0 5 3.3 9.3 7.8 10.8.6.1.8-.3.8-.6v-2.1c-3.2.7-3.8-1.4-3.8-1.4-.5-1.3-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 .1.6 2.9 4.1 2.1.1-.8.4-1.3.7-1.6-2.5-.3-5.2-1.3-5.2-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.2 1.2.9-.3 1.9-.4 2.9-.4s2 .1 2.9.4c2.2-1.5 3.2-1.2 3.2-1.2.6 1.6.2 2.8.1 3.1.8.8 1.2 1.9 1.2 3.1 0 4.4-2.7 5.4-5.2 5.7.4.4.8 1.1.8 2.1v3.1c0 .3.2.7.8.6 4.6-1.5 7.8-5.8 7.8-10.8C23.4 5.6 18.3.5 12 .5z"
-                  />
-                </svg>
-                <span className="absolute right-[5px] top-1 h-2 w-2 rounded-full border-2 border-white bg-[#f59e0b]" />
-              </button>
+                  <span className="text-sm font-black">
+                    {label.includes("GitHub") ? "GH" : "G"}
+                  </span>
+                  <span className="absolute right-[5px] top-1 h-2 w-2 rounded-full border-2 border-white bg-[#f59e0b]" />
+                </button>
+              ))}
             </div>
           </div>
 
           <div className="mt-4 rounded-2xl border border-[rgba(37,99,235,0.18)] bg-[#eff6ff] px-[14px] py-[13px] text-[12px] font-extrabold leading-[1.65] text-[#475569]">
             <strong className="mb-1 block text-[13px] font-black text-[#1d4ed8]">
-              시연용 인증 안내
+              인증 연동 안내
             </strong>
-            현재 로그인은 프론트 시연용으로 동작합니다. 회원가입 시
-            localStorage에 저장된 계정과 비교하며, 실제 배포 시에는 서버 DB와
-            비밀번호 해시 기반 인증으로 교체해야 합니다.
+            백엔드 API 연결을 먼저 시도하고, 서버가 준비되지 않은 경우에만
+            시연용 localStorage 로그인으로 동작합니다.
           </div>
         </form>
 
         <div className="mt-[22px] flex justify-center gap-2 text-[14px]">
           <span className="text-[#475569]">아직 회원이 아니신가요?</span>
-
           <Link to="/signup" className="font-black text-[#2563eb] no-underline">
             회원가입 하기
           </Link>
