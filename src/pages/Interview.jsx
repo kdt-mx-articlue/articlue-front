@@ -295,8 +295,8 @@ export default function Interview() {
             isDarkMode ? "bg-[#020617]" : "bg-slate-50"
           }`}
         >
-          <section className="mx-auto flex min-h-0 w-full max-w-[1050px] flex-1 flex-col px-8 pt-[26px]">
-            <div className="mb-[18px] flex items-center justify-between gap-4 rounded-[24px] border border-slate-200 bg-white px-[22px] py-[18px] shadow-[0_8px_24px_rgba(15,23,42,0.06)] dark:border-slate-700 dark:bg-slate-900">
+          <section className="mx-auto flex min-h-0 w-full max-w-[1080px] flex-1 flex-col px-8 pt-[22px]">
+            <div className="mb-[14px] flex items-center justify-between gap-4 rounded-[22px] border border-slate-200 bg-white px-[22px] py-[16px] shadow-[0_8px_24px_rgba(15,23,42,0.06)] dark:border-slate-700 dark:bg-slate-900">
               <div>
                 <strong className="text-[16px] font-black">
                   {difficulty} 면접 진행 중
@@ -325,7 +325,7 @@ export default function Interview() {
               </div>
             </div>
 
-            <div className="flex min-h-0 flex-1 flex-col gap-[18px] overflow-y-auto rounded-[24px] border border-slate-200 bg-white p-6 shadow-[0_8px_24px_rgba(15,23,42,0.06)] dark:border-slate-700 dark:bg-slate-900">
+            <div className="flex min-h-0 flex-1 flex-col gap-[16px] overflow-y-auto rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.06)] dark:border-slate-700 dark:bg-slate-900">
               <div className="w-fit animate-pulse rounded-[20px] bg-slate-100 px-[15px] py-3 text-[13px] font-extrabold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                 기업 JD와 포트폴리오를 분석 중입니다...
               </div>
@@ -365,7 +365,7 @@ export default function Interview() {
               )}
             </div>
 
-            <div className="mt-[18px] shrink-0 rounded-t-[24px] border border-slate-200 bg-white p-[18px] shadow-[0_8px_24px_rgba(15,23,42,0.06)] dark:border-slate-700 dark:bg-slate-900">
+            <div className="mt-[14px] shrink-0 rounded-t-[24px] border border-slate-200 bg-white p-[16px] shadow-[0_8px_24px_rgba(15,23,42,0.06)] dark:border-slate-700 dark:bg-slate-900">
               <div className="mb-3">
                 <div className="mb-2 flex justify-between text-[13px] font-black text-slate-600 dark:text-slate-300">
                   <span>답변 타이머</span>
@@ -439,8 +439,8 @@ export default function Interview() {
         </Link>
       </header>
 
-      <main className="mx-auto flex w-full max-w-[1180px] flex-col gap-5 px-8 pb-12 pt-[18px]">
-        <nav className="grid grid-cols-[auto_1fr_auto_1fr_auto_1fr_auto_1fr_auto] items-center gap-[14px] rounded-[28px] border border-slate-200 bg-white/80 px-7 py-[18px] shadow-[0_14px_38px_rgba(15,23,42,0.06)] backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/80">
+      <main className="mx-auto flex w-full max-w-[1180px] flex-col gap-4 px-8 pb-10 pt-[14px]">
+        <nav className="grid grid-cols-[auto_1fr_auto_1fr_auto_1fr_auto_1fr_auto] items-center gap-[12px] rounded-[24px] border border-slate-200 bg-white/80 px-6 py-[14px] shadow-[0_10px_28px_rgba(15,23,42,0.05)] backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/80">
           {[
             ["1", "조건 설정", "setup"],
             ["2", "요약 확인", "summary"],
@@ -497,7 +497,7 @@ export default function Interview() {
           />
         )}
 
-        <div className="mx-auto flex w-full max-w-[680px] items-start gap-[14px] rounded-[22px] border border-slate-200 bg-white/80 px-[22px] py-[18px] shadow-[0_10px_28px_rgba(15,23,42,0.04)] dark:border-slate-700 dark:bg-slate-900/80">
+        <div className="mx-auto flex w-full max-w-[760px] items-start gap-[14px] rounded-[20px] border border-slate-200 bg-white/80 px-[20px] py-[14px] shadow-[0_8px_22px_rgba(15,23,42,0.04)] dark:border-slate-700 dark:bg-slate-900/80">
           <strong className="whitespace-nowrap text-[14px] font-black text-blue-700 dark:text-blue-300">
             진행 안내
           </strong>
@@ -515,12 +515,12 @@ export default function Interview() {
 
 function SetupView(props) {
   return (
-    <section className="mx-auto w-full max-w-[660px]">
-      <div className="w-full rounded-[30px] border border-slate-200 bg-white px-[30px] py-7 shadow-[0_18px_50px_rgba(15,23,42,0.08)] dark:border-slate-700 dark:bg-slate-900">
-        <h1 className="mb-[9px] text-[28px] font-black tracking-[-0.7px]">
+    <section className="mx-auto w-full max-w-[760px]">
+      <div className="w-full rounded-[28px] border border-slate-200 bg-white px-[30px] py-6 shadow-[0_14px_42px_rgba(15,23,42,0.07)] dark:border-slate-700 dark:bg-slate-900">
+        <h1 className="mb-[8px] text-[27px] font-black tracking-[-0.7px]">
           면접 조건을 설정하세요.
         </h1>
-        <p className="mb-[22px] text-[14px] font-extrabold leading-[1.7] text-slate-600 dark:text-slate-300">
+        <p className="mb-[20px] text-[14px] font-extrabold leading-[1.65] text-slate-600 dark:text-slate-300">
           기업, 포트폴리오, 난이도, 질문 수, 면접관 페르소나를 먼저 설정하세요.
           설정을 마치면 다음 단계에서 면접 준비 요약을 별도 화면으로 확인합니다.
         </p>
@@ -621,8 +621,8 @@ function SummaryView({
   backToSetup,
 }) {
   return (
-    <section className="mx-auto w-full max-w-[680px]">
-      <aside className="rounded-[30px] border border-slate-200 bg-white p-7 shadow-[0_18px_50px_rgba(15,23,42,0.08)] dark:border-slate-700 dark:bg-slate-900">
+    <section className="mx-auto w-full max-w-[760px]">
+      <aside className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_14px_42px_rgba(15,23,42,0.07)] dark:border-slate-700 dark:bg-slate-900">
         <div className="mb-5">
           <h2 className="mb-2 text-[25px] font-black tracking-[-0.5px]">
             면접 준비 요약
@@ -676,8 +676,8 @@ function ResultView({ summary, portfolio, difficulty, persona, messages, restart
   const score = answeredCount >= 3 ? 88 : answeredCount >= 1 ? 82 : 76;
 
   return (
-    <section className="mx-auto w-full max-w-[920px]">
-      <div className="rounded-[30px] border border-slate-200 bg-white p-7 shadow-[0_18px_50px_rgba(15,23,42,0.08)] dark:border-slate-700 dark:bg-slate-900">
+    <section className="mx-auto w-full max-w-[960px]">
+      <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_14px_42px_rgba(15,23,42,0.07)] dark:border-slate-700 dark:bg-slate-900">
         <div className="mb-6 flex items-start justify-between gap-5">
           <div>
             <p className="mb-2 text-[13px] font-black text-blue-700 dark:text-blue-300">
@@ -692,7 +692,7 @@ function ResultView({ summary, portfolio, difficulty, persona, messages, restart
             </p>
           </div>
 
-          <div className="min-w-[150px] rounded-[24px] bg-blue-50 px-5 py-4 text-center dark:bg-blue-950">
+          <div className="min-w-[160px] rounded-[24px] border border-blue-100 bg-blue-50 px-5 py-4 text-center shadow-[0_10px_28px_rgba(37,99,235,0.08)] dark:border-blue-900 dark:bg-blue-950">
             <span className="block text-[12px] font-black text-blue-700 dark:text-blue-300">
               종합 점수
             </span>
@@ -836,7 +836,7 @@ function BotMessage({ speaker, text, source }) {
         <div className="rounded-[22px] rounded-tl-lg border border-slate-200 bg-slate-100 px-[18px] py-4 text-[15px] leading-[1.7] dark:border-slate-700 dark:bg-slate-800">
           {text}
         </div>
-        <div className="mt-[34px] rounded-2xl border border-slate-200 bg-white p-3 text-[12px] leading-[1.6] text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+        <div className="mt-[12px] rounded-2xl border border-slate-200 bg-white p-3 text-[12px] leading-[1.6] text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
           <strong className="text-blue-700 dark:text-blue-300">RAG 근거</strong>
           <br />
           {source}
@@ -890,7 +890,7 @@ function FragmentStep({ num, label, active, showLine }) {
     <>
       <div className="flex flex-col items-center gap-[7px] whitespace-nowrap text-[12px] font-black text-slate-400">
         <span
-          className={`flex h-[34px] w-[34px] items-center justify-center rounded-full font-black ${
+          className={`flex h-[32px] w-[32px] items-center justify-center rounded-full font-black ${
             active
               ? "bg-blue-600 text-white shadow-[0_8px_18px_rgba(37,99,235,0.25)]"
               : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"

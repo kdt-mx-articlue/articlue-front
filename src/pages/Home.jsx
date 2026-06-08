@@ -116,7 +116,7 @@ function buildRecentActivities() {
     });
   });
 
-  return items.sort((a, b) => b.timestamp - a.timestamp).slice(0, 4);
+  return items.sort((a, b) => b.timestamp - a.timestamp).slice(0, 3);
 }
 
 function getScoreTone(score) {
@@ -252,14 +252,13 @@ export default function Home() {
   return (
     <AppLayout title="AI 커리어 홈">
       {showBanner && (
-        <div className="mb-[22px] flex items-center justify-between gap-[18px] rounded-[22px] border border-blue-100 bg-gradient-to-br from-blue-50 to-white px-5 py-[18px] shadow-[0_10px_30px_rgba(15,23,42,0.07)] transition-colors dark:border-blue-900 dark:from-slate-900 dark:to-slate-800">
+        <div className="mb-[18px] flex items-center justify-between gap-[18px] rounded-[22px] border border-blue-100 bg-gradient-to-br from-blue-50 to-white px-5 py-[16px] shadow-[0_10px_30px_rgba(15,23,42,0.07)] transition-colors dark:border-blue-900 dark:from-slate-900 dark:to-slate-800">
           <div>
             <strong className="mb-[5px] block text-[16px] font-black text-slate-900 dark:text-white">
               이력서를 완성하고 더 정확한 추천을 받아보세요.
             </strong>
             <p className="text-[13px] font-bold leading-[1.6] text-slate-600 dark:text-slate-300">
-              현재 정보만으로도 기업 추천은 가능하지만, 최종 제출을 완료하면
-              AI가 더 정확한 기업과 직무를 추천해드립니다.
+              최종 제출을 완료하면 AI가 더 정확한 기업과 직무를 추천해드립니다.
             </p>
           </div>
 
@@ -283,9 +282,9 @@ export default function Home() {
         </div>
       )}
 
-      <section className="relative mb-[22px] grid grid-cols-[minmax(0,1fr)_240px] items-center gap-8 overflow-hidden rounded-[30px] bg-gradient-to-br from-[#1e3a8a] via-[#2563eb] to-[#60a5fa] p-[34px] text-white shadow-[0_18px_55px_rgba(37,99,235,0.12)]">
+      <section className="relative mb-[20px] grid grid-cols-[minmax(0,1fr)_220px] items-center gap-7 overflow-hidden rounded-[28px] bg-gradient-to-br from-[#1e3a8a] via-[#2563eb] to-[#60a5fa] p-[28px] text-white shadow-[0_18px_55px_rgba(37,99,235,0.12)]">
         <div className="relative z-10">
-          <div className="mb-4 flex flex-wrap gap-2">
+          <div className="mb-3 flex flex-wrap gap-2">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/15 px-3 py-2 text-[13px] font-black">
               <span className="h-2 w-2 rounded-full bg-green-400" />
               오늘의 커리어 대시보드
@@ -295,13 +294,11 @@ export default function Home() {
             </div>
           </div>
 
-          <h2 className="mb-[14px] text-[31px] font-extrabold leading-[1.36] tracking-[-0.15px]">
-            <span className="block">내 지원 준비 상태와</span>
-            <span className="block">오늘 해야 할 액션을</span>
-            <span className="block">한눈에 확인하세요</span>
+          <h2 className="mb-[12px] text-[29px] font-extrabold leading-[1.34] tracking-[-0.2px]">
+            내 지원 준비 상태와 오늘 해야 할 액션을 한눈에 확인하세요
           </h2>
 
-          <p className="mb-6 max-w-[590px] text-[15px] leading-[1.78] opacity-95">
+          <p className="mb-5 max-w-[650px] text-[15px] leading-[1.72] opacity-95">
             이력서, 자소서, 면접, 기술스택 데이터를 연결해 현재 준비도와
             다음 행동, 추천 기업을 하나의 흐름으로 정리합니다.
           </p>
@@ -323,13 +320,13 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="relative z-10 w-[240px] rounded-[24px] border border-white/25 bg-white/15 p-5 backdrop-blur-xl">
+        <div className="relative z-10 w-[220px] rounded-[24px] border border-white/25 bg-white/15 p-5 backdrop-blur-xl">
           <div className="mb-3 text-[14px] font-black opacity-90">
             현재 추천 준비도
           </div>
 
           <div className="mb-[10px]">
-            <strong className="block text-[44px] font-black leading-none tracking-[-1px]">
+            <strong className="block text-[42px] font-black leading-none tracking-[-1px]">
               {overall}%
             </strong>
             <span className="mt-[7px] block whitespace-nowrap text-[13px] font-extrabold opacity-85">
@@ -337,14 +334,14 @@ export default function Home() {
             </span>
           </div>
 
-          <div className="mb-[14px] h-[10px] overflow-hidden rounded-full bg-white/20">
+          <div className="mb-[13px] h-[10px] overflow-hidden rounded-full bg-white/20">
             <div
               className="h-full rounded-full bg-gradient-to-r from-white to-green-200"
               style={{ width: `${overall}%` }}
             />
           </div>
 
-          <p className="text-[13px] font-medium leading-[1.72] opacity-90">
+          <p className="text-[13px] font-medium leading-[1.65] opacity-90">
             이력서 {careerScores.resume}%, 자소서 {careerScores.coverLetter}%,
             면접 {careerScores.interview}%, 기술 {careerScores.tech}% 기준입니다.
           </p>
@@ -353,7 +350,83 @@ export default function Home() {
         <div className="absolute -right-20 -top-24 h-[280px] w-[280px] rounded-full bg-white/15" />
       </section>
 
-      <section className="mb-[22px] grid grid-cols-4 gap-4">
+      <section className="mb-[20px] rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_10px_30px_rgba(15,23,42,0.07)] transition-colors dark:border-slate-700 dark:bg-slate-900">
+        <div className="mb-[18px] flex items-start justify-between gap-[14px]">
+          <div>
+            <p className="mb-2 text-[13px] font-black text-blue-700 dark:text-blue-300">
+              AI 추천 결과
+            </p>
+            <h3 className="mb-[7px] text-[22px] font-black tracking-[-0.5px] text-slate-900 dark:text-white">
+              오늘의 추천 기업 TOP 3
+            </h3>
+            <p className="text-[14px] font-bold leading-[1.6] text-slate-600 dark:text-slate-300">
+              현재 프로필과 준비도 데이터를 기준으로 적합도가 높은 기업입니다.
+            </p>
+          </div>
+
+          <Link
+            to="/fitting"
+            onClick={handleRecommendationViewed}
+            className="shrink-0 rounded-full border border-blue-100 bg-blue-50 px-4 py-2 text-[13px] font-black text-blue-700 transition hover:-translate-y-0.5 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-300"
+          >
+            전체 보기 →
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-3 gap-4">
+          {companyList.map((company, index) => (
+            <Link
+              key={company.title}
+              to={company.path}
+              className="group rounded-[24px] border border-slate-200 bg-slate-50 p-5 transition hover:-translate-y-0.5 hover:border-blue-200 hover:bg-white hover:shadow-[0_14px_34px_rgba(15,23,42,0.08)] dark:border-slate-700 dark:bg-slate-800 dark:hover:border-blue-800 dark:hover:bg-slate-900"
+            >
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-[17px] bg-blue-600 font-black text-white shadow-[0_10px_22px_rgba(37,99,235,0.2)]">
+                  {company.logo}
+                </div>
+
+                <span className="rounded-full bg-white px-3 py-2 text-[12px] font-black text-slate-500 dark:bg-slate-900 dark:text-slate-400">
+                  TOP {index + 1}
+                </span>
+              </div>
+
+              <strong className="mb-2 block min-h-[44px] break-keep text-[16px] font-black leading-[1.45] text-slate-900 dark:text-white">
+                {company.title}
+              </strong>
+
+              <p className="mb-4 line-clamp-2 text-[13px] font-bold leading-[1.6] text-slate-600 dark:text-slate-300">
+                {company.desc}
+              </p>
+
+              <div className="flex items-end justify-between gap-3">
+                <span className="text-[12px] font-black text-blue-700 dark:text-blue-300">
+                  매칭 적합도
+                </span>
+                <strong className="font-mono text-[26px] font-black text-emerald-600 dark:text-emerald-400">
+                  {company.score}
+                </strong>
+              </div>
+            </Link>
+          ))}
+        </div>
+
+        <div className="mt-[14px] flex flex-wrap gap-[7px]">
+          {[
+            `${techStacks.length}개 기술스택 반영`,
+            `${careerScores.coverLetter}% 자소서 준비도`,
+            `${careerScores.interview}% 면접 준비도`,
+          ].map((chip) => (
+            <span
+              key={chip}
+              className="rounded-full bg-blue-50 px-[10px] py-[6px] text-[12px] font-black text-blue-800 dark:bg-blue-950 dark:text-blue-300"
+            >
+              {chip}
+            </span>
+          ))}
+        </div>
+      </section>
+
+      <section className="mb-[20px] grid grid-cols-4 gap-4">
         {todayStatusCards.map((card) => (
           <Link
             key={card.label}
@@ -373,12 +446,12 @@ export default function Home() {
         ))}
       </section>
 
-      <section className="mb-[22px] grid grid-cols-[.9fr_1.1fr] gap-[22px]">
+      <section className="mb-[22px] grid grid-cols-[.95fr_1.05fr] gap-[22px]">
         <article className="rounded-[26px] border border-slate-200 bg-white p-6 shadow-[0_10px_30px_rgba(15,23,42,0.07)] transition-colors dark:border-slate-700 dark:bg-slate-900">
           <div className="mb-[18px] flex items-start justify-between gap-4">
             <div>
               <p className="mb-2 text-[13px] font-black text-blue-700 dark:text-blue-300">
-                오늘 해야 할 액션
+                다음 액션
               </p>
               <h3 className="text-[22px] font-black tracking-[-0.5px] text-slate-900 dark:text-white">
                 {nextAction.title}
@@ -427,71 +500,6 @@ export default function Home() {
         </article>
 
         <article className="rounded-[26px] border border-slate-200 bg-white p-6 shadow-[0_10px_30px_rgba(15,23,42,0.07)] transition-colors dark:border-slate-700 dark:bg-slate-900">
-          <div className="mb-[18px] flex items-start justify-between gap-[14px]">
-            <div>
-              <h3 className="mb-[7px] text-[20px] font-black tracking-[-0.4px] text-slate-900 dark:text-white">
-                오늘의 추천 기업
-              </h3>
-              <p className="text-[14px] font-bold leading-[1.6] text-slate-600 dark:text-slate-300">
-                현재 프로필 기준으로 적합도가 높은 기업입니다.
-              </p>
-            </div>
-
-            <Link
-              to="/fitting"
-              onClick={handleRecommendationViewed}
-              className="text-[13px] font-black text-blue-700 dark:text-blue-300"
-            >
-              전체 보기 →
-            </Link>
-          </div>
-
-          <div className="flex flex-col gap-3">
-            {companyList.map((company) => (
-              <Link
-                key={company.title}
-                to={company.path}
-                className="flex items-center gap-[14px] rounded-[20px] border border-slate-200 bg-white p-[15px] transition hover:-translate-y-0.5 hover:border-blue-100 hover:shadow-[0_10px_30px_rgba(15,23,42,0.07)] dark:border-slate-700 dark:bg-slate-800 dark:hover:border-blue-800"
-              >
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[17px] bg-blue-50 font-black text-blue-700 dark:bg-blue-950 dark:text-blue-300">
-                  {company.logo}
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <strong className="mb-1 block text-[15px] font-black text-slate-900 dark:text-white">
-                    {company.title}
-                  </strong>
-                  <span className="block truncate text-[12px] font-extrabold text-slate-600 dark:text-slate-300">
-                    {company.desc}
-                  </span>
-                </div>
-
-                <div className="font-mono text-[20px] font-black text-emerald-600 dark:text-emerald-400">
-                  {company.score}
-                </div>
-              </Link>
-            ))}
-          </div>
-
-          <div className="mt-[10px] flex flex-wrap gap-[7px]">
-            {[
-              `${techStacks.length}개 기술스택 반영`,
-              `${careerScores.coverLetter}% 자소서 준비도`,
-              `${careerScores.interview}% 면접 준비도`,
-            ].map((chip) => (
-              <span
-                key={chip}
-                className="rounded-full bg-blue-50 px-[10px] py-[6px] text-[12px] font-black text-blue-800 dark:bg-blue-950 dark:text-blue-300"
-              >
-                {chip}
-              </span>
-            ))}
-          </div>
-        </article>
-      </section>
-
-      <section className="mb-[22px] grid grid-cols-[1fr_.85fr] gap-[22px]">
-        <article className="rounded-[26px] border border-slate-200 bg-white p-6 shadow-[0_10px_30px_rgba(15,23,42,0.07)] transition-colors dark:border-slate-700 dark:bg-slate-900">
           <div className="mb-[18px] flex items-start justify-between gap-4">
             <div>
               <h3 className="mb-[7px] text-[20px] font-black tracking-[-0.4px] text-slate-900 dark:text-white">
@@ -514,22 +522,22 @@ export default function Home() {
               {recentActivities.map((activity, index) => (
                 <div
                   key={activity.id}
-                  className="grid grid-cols-[36px_1fr] gap-3 rounded-[18px] border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800"
+                  className="grid grid-cols-[36px_1fr_auto] items-center gap-3 rounded-[18px] border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800"
                 >
                   <div className="flex h-9 w-9 items-center justify-center rounded-[14px] bg-blue-50 text-[13px] font-black text-blue-700 dark:bg-blue-950 dark:text-blue-300">
                     {index + 1}
                   </div>
-                  <div>
-                    <div className="mb-1 text-[14px] font-black text-slate-900 dark:text-white">
+                  <div className="min-w-0">
+                    <div className="mb-1 truncate text-[14px] font-black text-slate-900 dark:text-white">
                       {activity.title}
                     </div>
                     <p className="line-clamp-1 text-[12px] font-bold text-slate-600 dark:text-slate-300">
                       {activity.desc}
                     </p>
-                    <span className="mt-1 block text-[11px] font-black text-slate-400 dark:text-slate-500">
-                      {activity.meta}
-                    </span>
                   </div>
+                  <span className="whitespace-nowrap text-[11px] font-black text-slate-400 dark:text-slate-500">
+                    {activity.meta}
+                  </span>
                 </div>
               ))}
             </div>
@@ -540,48 +548,6 @@ export default function Home() {
               이력서 작성, 기업 찜, 자소서 생성, 면접 연습을 진행하면 이곳에 표시됩니다.
             </div>
           )}
-        </article>
-
-        <article className="rounded-[26px] border border-blue-100 bg-gradient-to-b from-blue-50 to-white p-6 shadow-[0_10px_30px_rgba(15,23,42,0.07)] dark:border-slate-700 dark:from-slate-900 dark:to-slate-800">
-          <div className="mb-4 inline-flex rounded-full bg-blue-100 px-3 py-2 text-[12px] font-black text-blue-700 dark:bg-blue-950 dark:text-blue-300">
-            지원 준비 흐름
-          </div>
-          <h3 className="mb-3 text-[22px] font-black tracking-[-0.5px] text-slate-900 dark:text-white">
-            다음 단계까지 연결하세요.
-          </h3>
-          <p className="mb-[18px] break-keep text-[14px] font-bold leading-[1.7] text-slate-600 dark:text-slate-300">
-            현재 상태를 확인한 뒤 추천 기업, 자소서, 면접 준비까지 같은 흐름으로 이어가면 시연 완성도가 높아집니다.
-          </p>
-
-          <div className="grid gap-3">
-            {[
-              ["01", "프로필 작성", "기본 정보와 프로젝트 경험 입력", "/resume"],
-              ["02", "기업 추천", "JD와 프로필 기반 추천 기업 확인", "/fitting"],
-              ["03", "자소서 생성", "기업별 맞춤 지원 문장 정리", "/fitting"],
-              ["04", "면접 연습", "추천 기업 기준 실전 질문 연습", "/interview"],
-            ].map(([num, title, desc, path]) => (
-              <Link
-                key={num}
-                to={path}
-                className="grid grid-cols-[42px_1fr_auto] items-center gap-3 rounded-[18px] border border-blue-100 bg-white p-4 dark:border-slate-700 dark:bg-slate-900"
-              >
-                <span className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-blue-50 text-[12px] font-black text-blue-700 dark:bg-blue-950 dark:text-blue-300">
-                  {num}
-                </span>
-                <span>
-                  <strong className="block text-[14px] font-black text-slate-900 dark:text-white">
-                    {title}
-                  </strong>
-                  <span className="mt-1 block text-[12px] font-bold text-slate-500 dark:text-slate-400">
-                    {desc}
-                  </span>
-                </span>
-                <span className="text-[18px] font-black text-blue-700 dark:text-blue-300">
-                  ›
-                </span>
-              </Link>
-            ))}
-          </div>
         </article>
       </section>
     </AppLayout>

@@ -710,96 +710,6 @@ export default function MyPage() {
           <div className="absolute -right-[110px] -top-[130px] h-[300px] w-[300px] rounded-full bg-white/15" />
         </section>
 
-        <section className="mb-[22px] rounded-[26px] border border-slate-200 bg-white p-[25px] shadow-[0_10px_30px_rgba(15,23,42,0.07)] dark:border-slate-700 dark:bg-slate-900">
-          <div className="mb-[18px] flex items-start justify-between gap-4">
-            <div>
-              <h2 className="mb-[6px] text-[21px] font-black tracking-[-0.4px] text-slate-900 dark:text-white">
-                찜한 기업 공고
-              </h2>
-              <p className="break-keep text-[14px] leading-[1.65] text-slate-600 dark:text-slate-300">
-                커리어 피팅에서 찜한 기업 공고를 상단에서 바로 확인하고, 지원
-                전략·맞춤 자소서·면접 준비로 이어갈 수 있습니다.
-              </p>
-            </div>
-            <div className="min-w-[74px] rounded-[20px] bg-blue-50 px-[13px] py-[10px] text-center text-[13px] font-black text-blue-800 dark:bg-blue-950 dark:text-blue-200">
-              <strong className="block text-[24px] leading-none">
-                {favorites.length}
-              </strong>
-              개 찜
-            </div>
-          </div>
-
-          {favorites.length === 0 ? (
-            <div className="rounded-[22px] border border-dashed border-slate-200 bg-slate-100 p-7 text-center text-[14px] font-extrabold leading-[1.7] text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
-              아직 찜한 기업 공고가 없습니다.
-              <br />
-              커리어 피팅 화면에서 관심 있는 기업을 저장해보세요.
-            </div>
-          ) : (
-            <div className="grid grid-cols-3 gap-[14px]">
-              {favorites.map((job) => (
-                <article
-                  key={job.id}
-                  className="rounded-[22px] border border-slate-200 bg-white p-[18px] transition hover:-translate-y-0.5 hover:shadow-[0_10px_30px_rgba(15,23,42,0.07)] dark:border-slate-700 dark:bg-slate-800"
-                >
-                  <div className="mb-[10px] flex justify-between gap-[10px]">
-                    <div>
-                      <div className="text-[17px] font-black text-slate-900 dark:text-white">
-                        {job.company}
-                      </div>
-                      <div className="mt-1 text-[13px] font-extrabold text-slate-600 dark:text-slate-300">
-                        {job.role}
-                      </div>
-                    </div>
-                    <span className="h-fit rounded-full bg-emerald-50 px-[10px] py-[7px] text-[12px] font-black text-emerald-600 dark:bg-emerald-950 dark:text-emerald-300">
-                      {job.match}
-                    </span>
-                  </div>
-
-                  <p className="my-3 text-[13px] leading-[1.6] text-slate-600 dark:text-slate-300">
-                    {job.desc}
-                  </p>
-
-                  <div className="mb-[14px] flex flex-wrap gap-[7px]">
-                    {job.stacks.slice(0, 3).map((stack) => (
-                      <span
-                        key={stack}
-                        className="rounded-full border border-slate-200 bg-slate-100 px-[9px] py-[6px] text-[12px] font-extrabold text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
-                      >
-                        {stack}
-                      </span>
-                    ))}
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    <Link
-                      to={`/fitting?company=${encodeURIComponent(job.company)}`}
-                      className="rounded-full bg-blue-600 px-[14px] py-[9px] text-[12px] font-black text-white"
-                    >
-                      맞춤 자소서 작성
-                    </Link>
-                    <Link
-                      to={`/interview?company=${encodeURIComponent(
-                        job.company
-                      )}`}
-                      className="rounded-full border border-blue-600 bg-white px-[14px] py-[9px] text-[12px] font-black text-blue-700 transition-colors hover:bg-blue-50 dark:border-blue-500 dark:bg-slate-900 dark:text-blue-300 dark:hover:bg-blue-950/50"
-                    >
-                      AI 면접 시작
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => removeFavorite(job.id)}
-                      className="rounded-full border border-red-200 bg-red-50 px-[14px] py-[9px] text-[12px] font-black text-red-500 dark:border-red-900 dark:bg-red-950 dark:text-red-300"
-                    >
-                      찜 해제
-                    </button>
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
-        </section>
-
         <section className="mb-[22px] grid grid-cols-[1fr_.9fr] gap-[22px]">
           <div className="rounded-[26px] border border-slate-200 bg-white p-[25px] shadow-[0_10px_30px_rgba(15,23,42,0.07)] dark:border-slate-700 dark:bg-slate-900">
             <div className="mb-5 grid grid-cols-[auto_1fr] items-start gap-[18px]">
@@ -1188,6 +1098,96 @@ export default function MyPage() {
               ))}
             </div>
           </div>
+        </section>
+
+        <section className="mb-[22px] rounded-[26px] border border-slate-200 bg-white p-[25px] shadow-[0_10px_30px_rgba(15,23,42,0.07)] dark:border-slate-700 dark:bg-slate-900">
+          <div className="mb-[18px] flex items-start justify-between gap-4">
+            <div>
+              <h2 className="mb-[6px] text-[21px] font-black tracking-[-0.4px] text-slate-900 dark:text-white">
+                찜한 기업 공고
+              </h2>
+              <p className="break-keep text-[14px] leading-[1.65] text-slate-600 dark:text-slate-300">
+                커리어 피팅에서 찜한 기업 공고를 상단에서 바로 확인하고, 지원
+                전략·맞춤 자소서·면접 준비로 이어갈 수 있습니다.
+              </p>
+            </div>
+            <div className="min-w-[74px] rounded-[20px] bg-blue-50 px-[13px] py-[10px] text-center text-[13px] font-black text-blue-800 dark:bg-blue-950 dark:text-blue-200">
+              <strong className="block text-[24px] leading-none">
+                {favorites.length}
+              </strong>
+              개 찜
+            </div>
+          </div>
+
+          {favorites.length === 0 ? (
+            <div className="rounded-[22px] border border-dashed border-slate-200 bg-slate-100 p-7 text-center text-[14px] font-extrabold leading-[1.7] text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+              아직 찜한 기업 공고가 없습니다.
+              <br />
+              커리어 피팅 화면에서 관심 있는 기업을 저장해보세요.
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-[14px]">
+              {favorites.map((job) => (
+                <article
+                  key={job.id}
+                  className="rounded-[22px] border border-slate-200 bg-white p-[18px] transition hover:-translate-y-0.5 hover:shadow-[0_10px_30px_rgba(15,23,42,0.07)] dark:border-slate-700 dark:bg-slate-800"
+                >
+                  <div className="mb-[10px] flex justify-between gap-[10px]">
+                    <div>
+                      <div className="text-[17px] font-black text-slate-900 dark:text-white">
+                        {job.company}
+                      </div>
+                      <div className="mt-1 text-[13px] font-extrabold text-slate-600 dark:text-slate-300">
+                        {job.role}
+                      </div>
+                    </div>
+                    <span className="h-fit rounded-full bg-emerald-50 px-[10px] py-[7px] text-[12px] font-black text-emerald-600 dark:bg-emerald-950 dark:text-emerald-300">
+                      {job.match}
+                    </span>
+                  </div>
+
+                  <p className="my-3 text-[13px] leading-[1.6] text-slate-600 dark:text-slate-300">
+                    {job.desc}
+                  </p>
+
+                  <div className="mb-[14px] flex flex-wrap gap-[7px]">
+                    {job.stacks.slice(0, 3).map((stack) => (
+                      <span
+                        key={stack}
+                        className="rounded-full border border-slate-200 bg-slate-100 px-[9px] py-[6px] text-[12px] font-extrabold text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+                      >
+                        {stack}
+                      </span>
+                    ))}
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <Link
+                      to={`/fitting?company=${encodeURIComponent(job.company)}`}
+                      className="rounded-full bg-blue-600 px-[14px] py-[9px] text-[12px] font-black text-white"
+                    >
+                      맞춤 자소서 작성
+                    </Link>
+                    <Link
+                      to={`/interview?company=${encodeURIComponent(
+                        job.company
+                      )}`}
+                      className="rounded-full border border-blue-600 bg-white px-[14px] py-[9px] text-[12px] font-black text-blue-700 transition-colors hover:bg-blue-50 dark:border-blue-500 dark:bg-slate-900 dark:text-blue-300 dark:hover:bg-blue-950/50"
+                    >
+                      AI 면접 시작
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => removeFavorite(job.id)}
+                      className="rounded-full border border-red-200 bg-red-50 px-[14px] py-[9px] text-[12px] font-black text-red-500 dark:border-red-900 dark:bg-red-950 dark:text-red-300"
+                    >
+                      찜 해제
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
         </section>
 
         <section className="rounded-[26px] border border-slate-200 bg-white p-[25px] shadow-[0_10px_30px_rgba(15,23,42,0.07)] dark:border-slate-700 dark:bg-slate-900">

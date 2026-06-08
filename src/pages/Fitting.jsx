@@ -203,8 +203,12 @@ export default function Fitting() {
   return (
     <AppLayout title="커리어 피팅 & 맞춤 자소서">
       <div className="mx-auto w-full max-w-[1120px]">
-        <section className="relative mb-5 grid grid-cols-[minmax(0,1.25fr)_minmax(280px,.75fr)] items-center gap-7 overflow-hidden rounded-[28px] bg-gradient-to-br from-[#1e3a8a] via-[#2563eb] to-[#60a5fa] px-[30px] py-6 text-white shadow-[0_10px_30px_rgba(15,23,42,0.07)]">
+        <section className="relative mb-5 grid grid-cols-[minmax(0,1.25fr)_minmax(260px,.75fr)] items-center gap-7 overflow-hidden rounded-[28px] bg-gradient-to-br from-[#1e3a8a] via-[#2563eb] to-[#60a5fa] px-[30px] py-6 text-white shadow-[0_10px_30px_rgba(15,23,42,0.07)]">
           <div className="relative z-10 min-w-0">
+            <div className="mb-3 inline-flex rounded-full border border-white/20 bg-white/15 px-3 py-2 text-[12px] font-black">
+              AI 기업 매칭
+            </div>
+
             <h2 className="mb-[10px] break-keep text-[28px] font-black leading-[1.25] tracking-[-0.9px]">
               내 이력서와 가장 잘 맞는 기업을 확인하세요
             </h2>
@@ -237,8 +241,13 @@ export default function Fitting() {
             className="relative z-10 min-w-0 rounded-[24px] border border-white/25 bg-white/15 px-[18px] py-4 backdrop-blur-md"
             aria-label="추천 요약"
           >
-            <div className="mb-3 text-[13px] font-black opacity-90">
-              현재 최고 적합 기업
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <span className="text-[13px] font-black opacity-90">
+                현재 최고 적합 기업
+              </span>
+              <span className="rounded-full bg-white/15 px-3 py-1 text-[11px] font-black">
+                TOP 1
+              </span>
             </div>
 
             <div className="mb-[10px]">
@@ -300,8 +309,8 @@ export default function Fitting() {
         </div>
 
         <section className="grid grid-cols-1 items-start gap-4">
-          <div className="flex flex-col gap-[10px]">
-            {companies.map((company) => {
+          <div className="grid grid-cols-3 gap-4">
+            {companies.map((company, index) => {
               const active = selectedId === company.id;
               const liked = isLiked(company.id);
 
@@ -309,89 +318,79 @@ export default function Fitting() {
                 <article
                   key={company.id}
                   onClick={() => setSelectedId(company.id)}
-                  className={`min-h-[142px] cursor-pointer rounded-[22px] border bg-white px-[18px] py-4 shadow-[0_10px_30px_rgba(15,23,42,0.07)] transition hover:-translate-y-0.5 hover:border-blue-100 dark:bg-slate-900 ${
+                  className={`cursor-pointer rounded-[24px] border bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.07)] transition hover:-translate-y-0.5 hover:border-blue-200 dark:bg-slate-900 ${
                     active
                       ? "border-blue-600 shadow-[0_14px_36px_rgba(37,99,235,0.13)] dark:border-blue-500"
                       : "border-slate-200 dark:border-slate-700"
                   }`}
                 >
-                  <div className="mb-[10px] grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 font-black text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                  <div className="mb-4 flex items-start justify-between gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-[17px] bg-blue-50 font-black text-blue-700 dark:bg-blue-950 dark:text-blue-300">
                       {company.logo}
                     </div>
 
-                    <div className="min-w-0">
-                      <div className="mb-1 text-[18px] font-black text-slate-900 dark:text-white">
-                        {company.company}
-                      </div>
-                      <div className="text-[13px] font-extrabold text-slate-600 dark:text-slate-300">
-                        {company.role}
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="text-right text-[28px] font-black tracking-[-0.8px] text-emerald-600 dark:text-emerald-400">
+                    <div className="flex flex-col items-end gap-2">
+                      <span className="rounded-full bg-slate-100 px-3 py-1.5 text-[12px] font-black text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                        TOP {index + 1}
+                      </span>
+                      <strong className="text-[27px] font-black tracking-[-0.8px] text-emerald-600 dark:text-emerald-400">
                         {company.score}
-                      </div>
-                      <div className="mt-[3px] text-right text-[12px] font-black text-slate-400 dark:text-slate-500">
-                        직무 적합도
-                      </div>
+                      </strong>
                     </div>
                   </div>
 
-                  <div className="mb-[10px] rounded-2xl bg-slate-100 px-[14px] py-[11px] dark:bg-slate-800">
+                  <div className="mb-4">
+                    <h3 className="mb-1 text-[18px] font-black text-slate-900 dark:text-white">
+                      {company.company}
+                    </h3>
+                    <p className="text-[13px] font-extrabold text-slate-600 dark:text-slate-300">
+                      {company.role}
+                    </p>
+                  </div>
+
+                  <div className="mb-4 rounded-2xl bg-slate-100 px-[14px] py-[12px] dark:bg-slate-800">
                     <strong className="mb-2 block text-[13px] font-black text-blue-800 dark:text-blue-300">
-                      왜 추천됐나요?
+                      추천 근거
                     </strong>
 
                     <ul className="flex flex-col gap-[7px]">
                       {company.reasons.map((reason) => (
                         <li
                           key={reason}
-                          className="flex break-keep text-[13px] font-bold leading-[1.55] text-slate-600 before:mr-2 before:mt-2 before:h-[6px] before:w-[6px] before:shrink-0 before:rounded-full before:bg-blue-600 before:content-[''] dark:text-slate-300"
+                          className="line-clamp-1 break-keep text-[13px] font-bold leading-[1.55] text-slate-600 dark:text-slate-300"
                         >
-                          {reason}
+                          · {reason}
                         </li>
                       ))}
                     </ul>
                   </div>
 
-                  <div className="mb-[10px] flex flex-wrap gap-[7px]">
-                    {company.stacks.map((stack, index) => (
+                  <div className="mb-4 flex flex-wrap gap-[7px]">
+                    {company.stacks.slice(0, 3).map((stack) => (
                       <span
                         key={stack}
-                        className={`rounded-full px-[10px] py-[7px] text-[12px] font-black ${
-                          index === company.stacks.length - 1
-                            ? "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
-                            : "bg-blue-50 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
-                        }`}
+                        className="rounded-full bg-blue-50 px-[10px] py-[7px] text-[12px] font-black text-blue-800 dark:bg-blue-950 dark:text-blue-300"
                       >
                         {stack}
                       </span>
                     ))}
+                    {company.stacks.length > 3 && (
+                      <span className="rounded-full bg-slate-100 px-[10px] py-[7px] text-[12px] font-black text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                        +{company.stacks.length - 3}
+                      </span>
+                    )}
                   </div>
 
-                  <div className="grid grid-cols-[1fr_1fr_auto] items-center gap-2">
+                  <div className="grid grid-cols-[1fr_auto] gap-2">
                     <button
                       type="button"
                       onClick={(event) => {
                         event.stopPropagation();
                         generateResume(company);
                       }}
-                      className="inline-flex items-center justify-center rounded-full bg-blue-600 px-[18px] py-3 text-[14px] font-black text-white transition hover:-translate-y-0.5 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+                      className="inline-flex items-center justify-center rounded-full bg-blue-600 px-4 py-3 text-[13px] font-black text-white transition hover:-translate-y-0.5 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
                     >
-                      맞춤 자소서 생성
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        goInterview(company);
-                      }}
-                      className="inline-flex items-center justify-center rounded-full border border-blue-600 bg-white px-[18px] py-3 text-[14px] font-black text-blue-700 transition hover:-translate-y-0.5 hover:bg-blue-50 dark:border-blue-500 dark:bg-slate-900 dark:text-blue-300 dark:hover:bg-blue-950/50"
-                    >
-                      실전 면접 준비
+                      자소서 생성
                     </button>
 
                     <button
@@ -410,63 +409,51 @@ export default function Fitting() {
                       <BookmarkIcon active={liked} />
                     </button>
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      goInterview(company);
+                    }}
+                    className="mt-2 inline-flex w-full items-center justify-center rounded-full border border-blue-600 bg-white px-4 py-3 text-[13px] font-black text-blue-700 transition hover:-translate-y-0.5 hover:bg-blue-50 dark:border-blue-500 dark:bg-slate-900 dark:text-blue-300 dark:hover:bg-blue-950/50"
+                  >
+                    실전 면접 준비
+                  </button>
                 </article>
               );
             })}
           </div>
 
           <aside
-            className="grid min-h-[142px] grid-cols-[auto_minmax(170px,.85fr)_minmax(280px,1.15fr)_minmax(300px,1fr)_minmax(150px,.55fr)] items-center gap-[14px] rounded-[22px] border border-blue-100 bg-white px-[18px] py-4 shadow-[0_10px_30px_rgba(15,23,42,0.07)] dark:border-blue-900 dark:bg-slate-900"
+            className="grid grid-cols-[minmax(220px,.8fr)_minmax(300px,1.1fr)_auto] items-center gap-[18px] rounded-[24px] border border-blue-100 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.07)] dark:border-blue-900 dark:bg-slate-900"
             aria-label="선택 기업 준비 패널"
           >
-            <div className="flex h-[50px] w-[50px] rotate-[-6deg] items-center justify-center rounded-xl bg-[#13c85a] text-center text-[11px] font-black leading-none tracking-[-0.5px] text-white shadow-[0_8px_18px_rgba(16,185,129,0.18)]">
-              WEB
-              <br />
-              TOON
-            </div>
-
-            <div>
-              <h3 className="mb-2 text-[20px] font-black tracking-[-0.4px] text-slate-900 dark:text-white">
+            <div className="min-w-0">
+              <div className="mb-3 inline-flex rounded-full bg-blue-50 px-3 py-2 text-[12px] font-black text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                선택 기업 준비
+              </div>
+              <h3 className="mb-2 text-[21px] font-black tracking-[-0.5px] text-slate-900 dark:text-white">
                 {selected.panel.title}
               </h3>
-              <p className="break-keep text-[13px] font-bold leading-[1.6] text-slate-600 dark:text-slate-300">
+              <p className="break-keep text-[13px] font-bold leading-[1.65] text-slate-600 dark:text-slate-300">
                 {selected.panel.desc}
               </p>
             </div>
 
-            <div className="rounded-2xl border border-blue-100 bg-gradient-to-b from-blue-50 to-white p-[14px] dark:border-blue-900 dark:from-blue-950/45 dark:to-slate-900">
+            <div className="rounded-2xl border border-blue-100 bg-gradient-to-b from-blue-50 to-white p-[15px] dark:border-blue-900 dark:from-blue-950/45 dark:to-slate-900">
               <div className="mb-2 text-[12px] font-black text-blue-800 dark:text-blue-300">
                 맞춤 자소서 방향
               </div>
-              <div className="mb-[6px] text-[14px] font-black text-slate-900 dark:text-white">
+              <div className="mb-[6px] text-[15px] font-black text-slate-900 dark:text-white">
                 {selected.panel.previewTitle}
               </div>
-              <p className="break-keep text-[12px] font-bold leading-[1.55] text-slate-600 dark:text-slate-300">
+              <p className="line-clamp-2 break-keep text-[12px] font-bold leading-[1.6] text-slate-600 dark:text-slate-300">
                 {selected.panel.previewText}
               </p>
             </div>
 
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                ["1", "기업 선택"],
-                ["2", "자소서 생성"],
-                ["3", "면접 대비"],
-              ].map(([num, label]) => (
-                <div
-                  key={num}
-                  className="rounded-2xl border border-slate-200 bg-slate-100 px-[10px] py-[11px] text-center dark:border-slate-700 dark:bg-slate-800"
-                >
-                  <span className="mb-[7px] inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-50 text-[12px] font-black text-blue-800 dark:bg-blue-950 dark:text-blue-300">
-                    {num}
-                  </span>
-                  <strong className="block text-[12px] font-black leading-[1.35] text-slate-900 dark:text-white">
-                    {label}
-                  </strong>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex flex-col gap-2">
+            <div className="flex min-w-[150px] flex-col gap-2">
               <button
                 type="button"
                 onClick={() => generateResume(selected)}

@@ -413,9 +413,13 @@ export default function Growth() {
 
   return (
     <AppLayout title="커리어 분석 리포트">
-      <section className="relative mb-[22px] grid grid-cols-[1.25fr_.75fr] items-center gap-7 overflow-hidden rounded-[30px] bg-gradient-to-br from-[#1e3a8a] via-[#2563eb] to-[#60a5fa] p-[34px] text-white shadow-[0_18px_55px_rgba(37,99,235,0.12)]">
+      <section className="relative mb-[20px] grid grid-cols-[1.25fr_.75fr] items-center gap-7 overflow-hidden rounded-[28px] bg-gradient-to-br from-[#1e3a8a] via-[#2563eb] to-[#60a5fa] p-[30px] text-white shadow-[0_18px_55px_rgba(37,99,235,0.12)]">
         <div className="relative z-10">
-          <h2 className="mb-3 mt-[6px] break-keep text-[32px] font-black leading-[1.25] tracking-[-1px]">
+          <div className="mb-3 inline-flex rounded-full border border-white/25 bg-white/15 px-3 py-2 text-[12px] font-black text-white/95">
+            AI 성장 진단 리포트
+          </div>
+
+          <h2 className="mb-3 break-keep text-[30px] font-black leading-[1.28] tracking-[-1px]">
             내 커리어 프로필의 약점을 진단하고 합격 가능성을 높일 성장 루트를 확인하세요.
           </h2>
 
@@ -424,22 +428,17 @@ export default function Growth() {
             역량·보완 이유·다음 액션을 한 화면에서 정리합니다.
           </p>
 
-          <div className="mt-[14px] inline-flex rounded-full border border-white/25 bg-white/15 px-3 py-2 text-[12px] font-black text-white/95">
-            계산 기준: 이력서 · 자소서 · 면접 · 기술스택 입력값
-          </div>
-
           <div className="mt-5 flex flex-wrap gap-[10px]">
-            <button
-              type="button"
-              onClick={() => showToast("맞춤 보완 루트를 생성했습니다.")}
-              className="rounded-full bg-white px-[18px] py-3 text-[14px] font-black text-blue-700"
+            <Link
+              to={primaryAction.path}
+              className="rounded-full bg-white px-[18px] py-3 text-[14px] font-black text-blue-700 transition hover:-translate-y-0.5"
             >
-              부족한 역량 보완하러 가기
-            </button>
+              {primaryAction.label}
+            </Link>
 
             <Link
               to="/interview"
-              className="rounded-full border border-white/60 px-[18px] py-3 text-[14px] font-black text-white"
+              className="rounded-full border border-white/60 px-[18px] py-3 text-[14px] font-black text-white transition hover:-translate-y-0.5 hover:bg-white/10"
             >
               맞춤 면접 질문 생성하기
             </Link>
@@ -447,18 +446,14 @@ export default function Growth() {
         </div>
 
         <div className="relative z-10 rounded-[24px] border border-white/25 bg-white/15 p-[18px] backdrop-blur-md">
-          <div className="mb-[14px] text-[13px] font-black opacity-90">
-            종합 성장 준비도
+          <div className="mb-[14px] flex items-center justify-between gap-3 text-[13px] font-black opacity-90">
+            <span>종합 성장 준비도</span>
+            <span>{readinessStatus}</span>
           </div>
 
-          <div className="mb-[11px] flex items-end justify-between gap-3">
-            <strong className="text-[42px] font-black leading-none tracking-[-1px]">
-              {careerScores.overall}%
-            </strong>
-            <span className="text-[13px] font-black opacity-90">
-              {readinessStatus}
-            </span>
-          </div>
+          <strong className="mb-[11px] block text-[42px] font-black leading-none tracking-[-1px]">
+            {careerScores.overall}%
+          </strong>
 
           <div className="mb-[13px] h-[10px] overflow-hidden rounded-full bg-white/20">
             <div
@@ -469,167 +464,15 @@ export default function Growth() {
 
           <p className="text-[13px] leading-[1.6] opacity-90">
             이력서 {careerScores.resume}%, 자소서 {careerScores.coverLetter}%,
-            면접 {careerScores.interview}%, 기술 적합도 {careerScores.tech}%를
-            기준으로 계산된 준비도입니다.
+            면접 {careerScores.interview}%, 기술 적합도 {careerScores.tech}% 기준입니다.
           </p>
         </div>
 
         <div className="absolute -right-20 -top-24 h-[280px] w-[280px] rounded-full bg-white/15" />
       </section>
 
-      <section className="mb-[22px] grid grid-cols-4 gap-4">
-        {dashboardCards.map((card) => (
-          <article
-            key={card.label}
-            className="rounded-[26px] border border-slate-200 bg-white p-[22px] shadow-[0_10px_30px_rgba(15,23,42,0.07)] transition hover:-translate-y-0.5 hover:shadow-[0_18px_40px_rgba(15,23,42,0.10)] dark:border-slate-700 dark:bg-slate-900"
-          >
-            <div className="mb-[13px] flex items-start justify-between gap-3">
-              <div>
-                <h3 className="text-[15px] font-black text-slate-900 dark:text-white">
-                  {card.label}
-                </h3>
-                <p className="mt-2 break-keep text-[12px] font-bold leading-[1.55] text-slate-500 dark:text-slate-400">
-                  {card.description}
-                </p>
-              </div>
-
-              <span className="shrink-0 rounded-full bg-blue-50 px-[10px] py-[7px] text-[12px] font-black text-blue-700 dark:bg-blue-950 dark:text-blue-300">
-                {getScoreLevel(card.value)}
-              </span>
-            </div>
-
-            <div className="mb-[12px] flex items-end justify-between gap-3">
-              <strong className="text-[34px] font-black leading-none tracking-[-1px] text-slate-900 dark:text-white">
-                {card.value}%
-              </strong>
-              <Link
-                to={card.path}
-                className="rounded-full border border-blue-600 px-[12px] py-[8px] text-[12px] font-black text-blue-700 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-950"
-              >
-                {card.buttonLabel}
-              </Link>
-            </div>
-
-            <div className="h-[9px] overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-blue-600 to-emerald-500"
-                style={{ width: `${card.value}%` }}
-              />
-            </div>
-          </article>
-        ))}
-      </section>
-
-      <section className="mb-[22px] grid grid-cols-[1.05fr_.95fr] gap-5">
-        <article className="rounded-[28px] border border-amber-100 bg-amber-50 p-[26px] shadow-[0_10px_30px_rgba(15,23,42,0.07)] dark:border-amber-900 dark:bg-amber-950/30">
-          <div className="mb-4 inline-flex rounded-full bg-white px-[12px] py-[8px] text-[12px] font-black text-amber-700 dark:bg-slate-900 dark:text-amber-300">
-            우선 보완 영역
-          </div>
-
-          <h3 className="mb-2 text-[24px] font-black tracking-[-0.6px] text-slate-900 dark:text-white">
-            {lowestScoreItem.label}
-          </h3>
-
-          <div className="mb-4 flex items-end gap-2">
-            <strong className="text-[46px] font-black leading-none tracking-[-1.2px] text-amber-700 dark:text-amber-300">
-              {lowestScoreItem.score}%
-            </strong>
-            <span className="pb-1 text-[13px] font-black text-slate-500 dark:text-slate-400">
-              현재 가장 낮은 항목
-            </span>
-          </div>
-
-          <h4 className="mb-2 break-keep text-[18px] font-black text-slate-900 dark:text-white">
-            {lowestScoreItem.title}
-          </h4>
-
-          <p className="mb-5 break-keep text-[14px] font-bold leading-[1.75] text-slate-700 dark:text-slate-300">
-            {lowestScoreItem.description}
-          </p>
-
-          <Link
-            to={lowestScoreItem.path}
-            className="inline-flex rounded-full bg-amber-600 px-[18px] py-3 text-[14px] font-black text-white hover:bg-amber-700"
-          >
-            {lowestScoreItem.buttonLabel}
-          </Link>
-        </article>
-
-        <article className="rounded-[28px] border border-slate-200 bg-white p-[26px] shadow-[0_10px_30px_rgba(15,23,42,0.07)] dark:border-slate-700 dark:bg-slate-900">
-          <div className="mb-5">
-            <p className="mb-2 text-[13px] font-black text-blue-700 dark:text-blue-300">
-              Next Best Actions
-            </p>
-            <h3 className="text-[23px] font-black tracking-[-0.5px] text-slate-900 dark:text-white">
-              지금 바로 이어갈 추천 액션
-            </h3>
-          </div>
-
-          <div className="grid gap-3">
-            {actionCards.map((action) => (
-              <div
-                key={action.title}
-                className="flex items-center justify-between gap-4 rounded-[20px] border border-slate-200 bg-slate-50 p-[16px] dark:border-slate-700 dark:bg-slate-800"
-              >
-                <div>
-                  <span className="mb-2 inline-flex rounded-full bg-blue-50 px-[10px] py-[6px] text-[11px] font-black text-blue-700 dark:bg-blue-950 dark:text-blue-300">
-                    {action.label}
-                  </span>
-                  <strong className="mb-1 block break-keep text-[15px] font-black text-slate-900 dark:text-white">
-                    {action.title}
-                  </strong>
-                  <p className="break-keep text-[12px] font-bold leading-[1.6] text-slate-600 dark:text-slate-300">
-                    {action.description}
-                  </p>
-                </div>
-
-                <Link
-                  to={action.path}
-                  className="shrink-0 rounded-full border border-blue-600 px-[14px] py-[9px] text-[12px] font-black text-blue-700 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-950"
-                >
-                  이동
-                </Link>
-              </div>
-            ))}
-          </div>
-        </article>
-      </section>
-
-      <section className="mb-[22px] rounded-[28px] border border-slate-200 bg-white p-[26px] shadow-[0_10px_30px_rgba(15,23,42,0.07)] dark:border-slate-700 dark:bg-slate-900">
-        <div className="mb-[18px]">
-          <p className="mb-2 text-[13px] font-black text-blue-700 dark:text-blue-300">
-            Support Flow
-          </p>
-          <h3 className="text-[22px] font-black tracking-[-0.5px] text-slate-900 dark:text-white">
-            지원 준비 흐름
-          </h3>
-          <p className="mt-2 break-keep text-[14px] leading-[1.65] text-slate-600 dark:text-slate-300">
-            Articlue의 각 화면이 어떤 순서로 연결되는지 한눈에 확인할 수 있습니다.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-5 gap-3">
-          {supportFlow.map(([step, title, desc]) => (
-            <div
-              key={step}
-              className="rounded-[22px] border border-slate-200 bg-slate-50 p-[17px] dark:border-slate-700 dark:bg-slate-800"
-            >
-              <span className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-[12px] font-black text-white">
-                {step}
-              </span>
-              <strong className="mb-2 block text-[15px] font-black text-slate-900 dark:text-white">
-                {title}
-              </strong>
-              <p className="break-keep text-[12px] font-bold leading-[1.6] text-slate-600 dark:text-slate-300">
-                {desc}
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="mb-[22px] rounded-[28px] border border-slate-200 bg-white p-[26px] shadow-[0_10px_30px_rgba(15,23,42,0.07)] dark:border-slate-700 dark:bg-slate-900">
-        <div className="mb-[20px] flex items-start justify-between gap-4">
+      <section className="mb-[20px] rounded-[28px] border border-slate-200 bg-white p-[24px] shadow-[0_10px_30px_rgba(15,23,42,0.07)] dark:border-slate-700 dark:bg-slate-900">
+        <div className="mb-[18px] flex items-start justify-between gap-4">
           <div>
             <p className="mb-2 text-[13px] font-black text-blue-700 dark:text-blue-300">
               AI Recommended Companies
@@ -644,7 +487,7 @@ export default function Growth() {
 
           <Link
             to="/fitting"
-            className="shrink-0 rounded-full border border-blue-600 px-[16px] py-[10px] text-[13px] font-black text-blue-700 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-950"
+            className="shrink-0 rounded-full border border-blue-600 px-[16px] py-[10px] text-[13px] font-black text-blue-700 transition hover:-translate-y-0.5 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-950"
           >
             전체 추천 보기
           </Link>
@@ -698,7 +541,7 @@ export default function Growth() {
                 <p className="mb-2 text-[11px] font-black uppercase tracking-[0.08em] text-blue-700 dark:text-blue-300">
                   추천 이유
                 </p>
-                <p className="break-keep text-[13px] font-bold leading-[1.65] text-slate-700 dark:text-slate-300">
+                <p className="line-clamp-3 break-keep text-[13px] font-bold leading-[1.65] text-slate-700 dark:text-slate-300">
                   {company.reason}
                 </p>
               </div>
@@ -722,14 +565,14 @@ export default function Growth() {
                 <button
                   type="button"
                   onClick={() => setSelectedCompany(company)}
-                  className="rounded-full bg-blue-600 px-[12px] py-[10px] text-center text-[12px] font-black text-white hover:bg-blue-700"
+                  className="rounded-full bg-blue-600 px-[12px] py-[10px] text-center text-[12px] font-black text-white transition hover:bg-blue-700"
                 >
                   공고 분석 보기
                 </button>
 
                 <Link
                   to={`/interview?company=${encodeURIComponent(company.company)}`}
-                  className="rounded-full border border-blue-600 bg-white/80 px-[12px] py-[10px] text-center text-[12px] font-black text-blue-700 hover:bg-blue-50 dark:bg-slate-900 dark:text-blue-300 dark:hover:bg-blue-950"
+                  className="rounded-full border border-blue-600 bg-white/80 px-[12px] py-[10px] text-center text-[12px] font-black text-blue-700 transition hover:bg-blue-50 dark:bg-slate-900 dark:text-blue-300 dark:hover:bg-blue-950"
                 >
                   면접 준비
                 </Link>
@@ -739,7 +582,125 @@ export default function Growth() {
         </div>
       </section>
 
-      <section className="mb-[22px] grid grid-cols-[1fr_1fr] gap-5">
+      <section className="mb-[20px] grid grid-cols-[1.05fr_.95fr] gap-5">
+        <article className="rounded-[28px] border border-amber-100 bg-amber-50 p-[26px] shadow-[0_10px_30px_rgba(15,23,42,0.07)] dark:border-amber-900 dark:bg-amber-950/30">
+          <div className="mb-4 inline-flex rounded-full bg-white px-[12px] py-[8px] text-[12px] font-black text-amber-700 dark:bg-slate-900 dark:text-amber-300">
+            우선 보완 영역
+          </div>
+
+          <h3 className="mb-2 text-[24px] font-black tracking-[-0.6px] text-slate-900 dark:text-white">
+            {lowestScoreItem.label}
+          </h3>
+
+          <div className="mb-4 flex items-end gap-2">
+            <strong className="text-[46px] font-black leading-none tracking-[-1.2px] text-amber-700 dark:text-amber-300">
+              {lowestScoreItem.score}%
+            </strong>
+            <span className="pb-1 text-[13px] font-black text-slate-500 dark:text-slate-400">
+              현재 가장 낮은 항목
+            </span>
+          </div>
+
+          <h4 className="mb-2 break-keep text-[18px] font-black text-slate-900 dark:text-white">
+            {lowestScoreItem.title}
+          </h4>
+
+          <p className="mb-5 break-keep text-[14px] font-bold leading-[1.75] text-slate-700 dark:text-slate-300">
+            {lowestScoreItem.description}
+          </p>
+
+          <Link
+            to={lowestScoreItem.path}
+            className="inline-flex rounded-full bg-amber-600 px-[18px] py-3 text-[14px] font-black text-white transition hover:bg-amber-700"
+          >
+            {lowestScoreItem.buttonLabel}
+          </Link>
+        </article>
+
+        <article className="rounded-[28px] border border-slate-200 bg-white p-[26px] shadow-[0_10px_30px_rgba(15,23,42,0.07)] dark:border-slate-700 dark:bg-slate-900">
+          <div className="mb-5">
+            <p className="mb-2 text-[13px] font-black text-blue-700 dark:text-blue-300">
+              Next Best Actions
+            </p>
+            <h3 className="text-[23px] font-black tracking-[-0.5px] text-slate-900 dark:text-white">
+              지금 바로 이어갈 추천 액션
+            </h3>
+          </div>
+
+          <div className="grid gap-3">
+            {actionCards.map((action) => (
+              <div
+                key={action.title}
+                className="flex items-center justify-between gap-4 rounded-[20px] border border-slate-200 bg-slate-50 p-[16px] dark:border-slate-700 dark:bg-slate-800"
+              >
+                <div>
+                  <span className="mb-2 inline-flex rounded-full bg-blue-50 px-[10px] py-[6px] text-[11px] font-black text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                    {action.label}
+                  </span>
+                  <strong className="mb-1 block break-keep text-[15px] font-black text-slate-900 dark:text-white">
+                    {action.title}
+                  </strong>
+                  <p className="break-keep text-[12px] font-bold leading-[1.6] text-slate-600 dark:text-slate-300">
+                    {action.description}
+                  </p>
+                </div>
+
+                <Link
+                  to={action.path}
+                  className="shrink-0 rounded-full border border-blue-600 px-[14px] py-[9px] text-[12px] font-black text-blue-700 transition hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-950"
+                >
+                  이동
+                </Link>
+              </div>
+            ))}
+          </div>
+        </article>
+      </section>
+
+      <section className="mb-[20px] grid grid-cols-4 gap-4">
+        {dashboardCards.map((card) => (
+          <article
+            key={card.label}
+            className="rounded-[24px] border border-slate-200 bg-white p-[20px] shadow-[0_10px_30px_rgba(15,23,42,0.07)] transition hover:-translate-y-0.5 hover:shadow-[0_18px_40px_rgba(15,23,42,0.10)] dark:border-slate-700 dark:bg-slate-900"
+          >
+            <div className="mb-[12px] flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-[15px] font-black text-slate-900 dark:text-white">
+                  {card.label}
+                </h3>
+                <p className="mt-2 line-clamp-2 break-keep text-[12px] font-bold leading-[1.55] text-slate-500 dark:text-slate-400">
+                  {card.description}
+                </p>
+              </div>
+
+              <span className="shrink-0 rounded-full bg-blue-50 px-[10px] py-[7px] text-[12px] font-black text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                {getScoreLevel(card.value)}
+              </span>
+            </div>
+
+            <div className="mb-[12px] flex items-end justify-between gap-3">
+              <strong className="text-[31px] font-black leading-none tracking-[-1px] text-slate-900 dark:text-white">
+                {card.value}%
+              </strong>
+              <Link
+                to={card.path}
+                className="rounded-full border border-blue-600 px-[12px] py-[8px] text-[12px] font-black text-blue-700 transition hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-950"
+              >
+                {card.buttonLabel}
+              </Link>
+            </div>
+
+            <div className="h-[9px] overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-blue-600 to-emerald-500"
+                style={{ width: `${card.value}%` }}
+              />
+            </div>
+          </article>
+        ))}
+      </section>
+
+      <section className="mb-[20px] grid grid-cols-[1fr_1fr] gap-5">
         <article className="rounded-[28px] border border-slate-200 bg-white p-[24px] shadow-[0_10px_30px_rgba(15,23,42,0.07)] dark:border-slate-700 dark:bg-slate-900">
           <div className="mb-4">
             <h3 className="text-[21px] font-black tracking-[-0.5px] text-slate-900 dark:text-white">
@@ -750,7 +711,7 @@ export default function Growth() {
             </p>
           </div>
 
-          <div className="h-[310px]">
+          <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <RadarChart data={radarData}>
                 <PolarGrid />
@@ -778,7 +739,7 @@ export default function Growth() {
             </p>
           </div>
 
-          <div className="h-[310px]">
+          <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={readinessData}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -874,21 +835,21 @@ export default function Growth() {
           <button
             type="button"
             onClick={() => showToast("맞춤 성장 루트를 저장했습니다.")}
-            className="rounded-full bg-blue-600 px-[18px] py-3 text-[14px] font-black text-white"
+            className="rounded-full bg-blue-600 px-[18px] py-3 text-[14px] font-black text-white transition hover:bg-blue-700"
           >
             부족한 역량 보완하러 가기
           </button>
 
           <Link
             to="/interview"
-            className="rounded-full border border-blue-600 px-[18px] py-3 text-[14px] font-black text-blue-700 dark:text-blue-300"
+            className="rounded-full border border-blue-600 px-[18px] py-3 text-[14px] font-black text-blue-700 transition hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-950"
           >
             맞춤 면접 질문 생성하기
           </Link>
 
           <Link
             to="/fitting"
-            className="rounded-full border border-slate-200 bg-slate-100 px-[18px] py-3 text-[14px] font-black text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+            className="rounded-full border border-slate-200 bg-slate-100 px-[18px] py-3 text-[14px] font-black text-slate-600 transition hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
           >
             추천 기업 다시 확인하기
           </Link>

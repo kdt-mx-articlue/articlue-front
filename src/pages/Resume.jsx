@@ -210,11 +210,11 @@ function Section({ id, title, description, action, children }) {
   return (
     <section
       id={id}
-      className="mb-5 scroll-mt-[96px] rounded-[24px] border border-slate-200 bg-white p-6 shadow-[0_8px_24px_rgba(15,23,42,0.06)] transition-colors dark:border-slate-700 dark:bg-slate-900"
+      className="mb-5 scroll-mt-[96px] rounded-[26px] border border-slate-200 bg-white p-[26px] shadow-[0_10px_30px_rgba(15,23,42,0.07)] transition-colors dark:border-slate-700 dark:bg-slate-900"
     >
-      <div className="mb-[18px] flex items-start justify-between gap-4">
+      <div className="mb-[20px] flex items-start justify-between gap-4">
         <div>
-          <h2 className="mb-[7px] text-[20px] font-black tracking-[-0.4px] text-slate-900 dark:text-white">
+          <h2 className="mb-[7px] text-[21px] font-black tracking-[-0.5px] text-slate-900 dark:text-white">
             {title}
           </h2>
           <p className="text-[14px] leading-[1.6] text-slate-600 dark:text-slate-300">
@@ -1115,75 +1115,103 @@ export default function Resume() {
 
   return (
     <AppLayout title="커리어 프로필 작성">
-      <div className="mb-5 rounded-[24px] border border-slate-200 bg-white px-5 py-4 shadow-[0_8px_24px_rgba(15,23,42,0.06)] transition-colors dark:border-slate-700 dark:bg-slate-900">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="min-w-[320px] flex-1">
-            <div className="mb-[7px] text-[13px] font-black text-emerald-600">
-              {resumeApiStatus === "checking"
-                ? "저장소 확인 중"
-                : resumeApiStatus === "connected" && resumeId
-                  ? `자동 저장됨 · Resume ID ${resumeId}`
-                  : "시연용 저장소에 자동 저장됨 · API 연결 대기"} · <strong>{progress}% 완료</strong>
+      <section className="relative mb-[22px] overflow-hidden rounded-[30px] bg-gradient-to-br from-[#1e3a8a] via-[#2563eb] to-[#60a5fa] p-[30px] text-white shadow-[0_18px_55px_rgba(37,99,235,0.12)]">
+        <div className="relative z-10 grid grid-cols-[minmax(0,1fr)_280px] items-center gap-7">
+          <div>
+            <div className="mb-3 inline-flex rounded-full border border-white/20 bg-white/15 px-3 py-2 text-[12px] font-black">
+              통합 커리어 프로필
             </div>
-            <div className="h-[9px] overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-blue-600 to-emerald-500 transition-all duration-300"
-                style={{ width: `${progress}%` }}
-              />
+            <h1 className="mb-[12px] break-keep text-[31px] font-black leading-[1.28] tracking-[-1px]">
+              한 번 입력한 이력서로 기업 추천, 자소서, 면접 준비까지 연결하세요
+            </h1>
+            <p className="max-w-[690px] break-keep text-[15px] leading-[1.75] opacity-95">
+              기본 정보, 기술스택, 학력, 경험, 포트폴리오를 저장하면 Articlue의 모든 추천 화면에서 같은 프로필 데이터를 사용합니다.
+            </p>
+            <div className="mt-[18px] flex flex-wrap gap-[10px]">
+              <button type="button" onClick={saveAndExit} className="rounded-full bg-white px-[18px] py-3 text-[14px] font-black text-blue-700 transition hover:-translate-y-0.5">
+                임시 저장 후 나가기
+              </button>
+              <button type="button" onClick={submitResume} className="rounded-full border border-white/60 px-[18px] py-3 text-[14px] font-black text-white transition hover:-translate-y-0.5 hover:bg-white/10">
+                최종 제출하기
+              </button>
             </div>
           </div>
 
-          <button type="button" onClick={saveAndExit} className={secondaryButtonClass}>
-            임시 저장 후 나가기
-          </button>
+          <div className="rounded-[24px] border border-white/25 bg-white/15 p-5 backdrop-blur-md">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <span className="text-[13px] font-black opacity-90">작성 완료도</span>
+              <span className="rounded-full bg-white/15 px-3 py-1 text-[11px] font-black">
+                {resumeApiStatus === "checking"
+                  ? "저장소 확인 중"
+                  : resumeApiStatus === "connected" && resumeId
+                    ? `Resume ID ${resumeId}`
+                    : "API 연결 대기"}
+              </span>
+            </div>
+            <strong className="mb-3 block text-[44px] font-black leading-none tracking-[-1px]">
+              {progress}%
+            </strong>
+            <div className="mb-4 h-[10px] overflow-hidden rounded-full bg-white/20">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-white to-emerald-200 transition-all duration-300"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <p className="break-keep text-[12px] font-extrabold leading-[1.65] opacity-90">
+              {resumeApiStatus === "checking"
+                ? "저장 상태를 확인하고 있습니다."
+                : resumeApiStatus === "connected" && resumeId
+                  ? "서버 연결 구조를 확인했습니다."
+                  : "시연용 저장소에 자동 저장 중입니다."}
+            </p>
+          </div>
         </div>
-      </div>
+        <div className="absolute -right-20 -top-24 h-[280px] w-[280px] rounded-full bg-white/15" />
+      </section>
 
-      <div className="mb-[22px]">
-        <h1 className="mb-[10px] text-[30px] font-black tracking-[-0.7px] text-slate-900 dark:text-white">
-          커리어 프로필 작성
-        </h1>
-        <p className="text-[15px] leading-[1.7] text-slate-600 dark:text-slate-300">
-          한 번만 입력하면 기업 매칭, 맞춤 자소서 생성, RAG 면접 시뮬레이션에
-          활용되는 통합 프로필이 만들어집니다.
-        </p>
-      </div>
-
-      <div>
+      <div className="pb-[110px]">
       <Section
         id="section-basic"
         title="1. 기본 정보 및 프로필 연동"
         description="GitHub를 연동하면 주요 기술 스택을 자동 파싱할 수 있습니다."
       >
-        <div className="mb-4 flex items-center justify-between gap-4 rounded-[22px] bg-slate-100 px-5 py-4 dark:bg-slate-800">
+        <div className="mb-5 grid grid-cols-[minmax(0,1fr)_260px] items-center gap-4 rounded-[24px] border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-800/70">
           <div>
-            <strong className="mb-[5px] block font-black text-slate-900 dark:text-white">
-              GitHub 계정 연동
+            <div className="mb-2 inline-flex rounded-full bg-blue-50 px-3 py-2 text-[12px] font-black text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+              GitHub 프로필 연동
+            </div>
+            <strong className="mb-[6px] block text-[18px] font-black text-slate-900 dark:text-white">
+              Repository와 README 기반으로 기술 경험을 보강합니다.
             </strong>
-            <p className="text-[13px] leading-[1.5] text-slate-600 dark:text-slate-300">
-              Repository, README, 사용 언어를 기반으로 기술 스택을 분석합니다.
+            <p className="break-keep text-[13px] font-bold leading-[1.6] text-slate-600 dark:text-slate-300">
+              현재는 시연용 입력 모달입니다. 실제 OAuth 연동 전까지 입력한 GitHub 정보를 저장해 기술스택 분석 흐름을 시연합니다.
             </p>
-            <div
-              className={`mt-2 text-[12px] font-black ${
-                github.connected ? "text-emerald-600" : "text-slate-400"
+          </div>
+
+          <div className="rounded-[20px] border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+            <span className="mb-2 block text-[12px] font-black text-slate-500 dark:text-slate-400">
+              연동 상태
+            </span>
+            <strong
+              className={`mb-3 block text-[15px] font-black ${
+                github.connected ? "text-emerald-600 dark:text-emerald-300" : "text-slate-900 dark:text-white"
               }`}
             >
               {github.connected
-                ? `${github.username || "GitHub"} 계정 정보가 저장되었습니다.`
-                : "아직 연동된 GitHub 계정이 없습니다."}
-            </div>
+                ? `${github.username || "GitHub"} 저장됨`
+                : "미연동"}
+            </strong>
+            <button
+              type="button"
+              onClick={() => {
+                setGithubDraft(github);
+                setGithubModalOpen(true);
+              }}
+              className="w-full rounded-full bg-blue-600 px-[16px] py-[11px] text-[13px] font-black text-white transition hover:-translate-y-0.5 hover:bg-blue-700"
+            >
+              {github.connected ? "연동 정보 수정" : "GitHub 계정 연동"}
+            </button>
           </div>
-
-          <button
-            type="button"
-            onClick={() => {
-              setGithubDraft(github);
-              setGithubModalOpen(true);
-            }}
-            className={primaryButtonClass}
-          >
-            GitHub 계정 연동하기
-          </button>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -1372,7 +1400,7 @@ export default function Resume() {
 {experiences.map((experience, index) => (
           <div
             key={index}
-            className="mb-4 rounded-[22px] border border-slate-200 bg-slate-100 p-5 last:mb-0 dark:border-slate-700 dark:bg-slate-800"
+            className="mb-4 rounded-[22px] border border-slate-200 bg-slate-50 p-5 last:mb-0 dark:border-slate-700 dark:bg-slate-800"
           >
             <div className="mb-4 flex items-center justify-between gap-3">
               <strong className="text-[16px] font-black text-slate-900 dark:text-white">
@@ -1454,7 +1482,7 @@ export default function Resume() {
         {essays.map((essay, index) => (
           <div
             key={index}
-            className="mb-4 rounded-[22px] border border-slate-200 bg-slate-100 p-5 last:mb-0 dark:border-slate-700 dark:bg-slate-800"
+            className="mb-4 rounded-[22px] border border-slate-200 bg-slate-50 p-5 last:mb-0 dark:border-slate-700 dark:bg-slate-800"
           >
             <div className="mb-4 flex items-center justify-between gap-3">
               <strong className="text-[16px] font-black text-slate-900 dark:text-white">
@@ -1570,7 +1598,7 @@ export default function Resume() {
 {certificates.map((certificate, index) => (
           <div
             key={index}
-            className="mb-4 rounded-[22px] border border-slate-200 bg-slate-100 p-5 last:mb-0 dark:border-slate-700 dark:bg-slate-800"
+            className="mb-4 rounded-[22px] border border-slate-200 bg-slate-50 p-5 last:mb-0 dark:border-slate-700 dark:bg-slate-800"
           >
             <div className="mb-4 flex items-center justify-between gap-3">
               <strong className="text-[16px] font-black text-slate-900 dark:text-white">
@@ -1655,7 +1683,7 @@ export default function Resume() {
         {careers.map((career, index) => (
           <div
             key={index}
-            className="mb-4 rounded-[22px] border border-slate-200 bg-slate-100 p-5 last:mb-0 dark:border-slate-700 dark:bg-slate-800"
+            className="mb-4 rounded-[22px] border border-slate-200 bg-slate-50 p-5 last:mb-0 dark:border-slate-700 dark:bg-slate-800"
           >
             <div className="mb-4 flex items-center justify-between gap-3">
               <strong className="text-[16px] font-black text-slate-900 dark:text-white">
@@ -1780,11 +1808,24 @@ export default function Resume() {
       </Section>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 z-50 flex h-[84px] items-center justify-center border-t border-slate-200 bg-white/90 backdrop-blur-xl dark:border-slate-700 dark:bg-slate-950/90">
-        <div className="flex w-full max-w-[1120px] items-center justify-between gap-4 px-10">
-          <p className="text-[14px] font-extrabold text-slate-600 dark:text-slate-300">
-            최종 제출하면 AI가 이력서를 분석해 추천 정확도를 업데이트합니다.
-          </p>
+      <div className="fixed bottom-0 left-0 right-0 z-50 flex min-h-[88px] items-center justify-center border-t border-slate-200 bg-white/92 backdrop-blur-xl dark:border-slate-700 dark:bg-slate-950/92">
+        <div className="grid w-full max-w-[1120px] grid-cols-[minmax(0,1fr)_auto] items-center gap-5 px-10 py-3">
+          <div>
+            <div className="mb-2 flex items-center gap-3">
+              <strong className="text-[15px] font-black text-slate-900 dark:text-white">
+                현재 이력서 완성도 {progress}%
+              </strong>
+              <span className="rounded-full bg-blue-50 px-3 py-1 text-[11px] font-black text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                자동 저장 중
+              </span>
+            </div>
+            <div className="h-[8px] max-w-[560px] overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-blue-600 to-emerald-500 transition-all duration-300"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          </div>
           <button type="button" onClick={submitResume} className={primaryButtonClass}>
             최종 제출하고 기업 추천받기
           </button>
