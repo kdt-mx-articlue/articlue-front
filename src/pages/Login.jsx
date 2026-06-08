@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { saveAuthUser } from "../utils/auth.js";
-import { login } from "../services/authApi.js";
+import { githubAuthLogin, login } from "../services/authApi.js";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -155,6 +155,47 @@ export default function Login() {
     window.location.href = naverURL;
   };
 
+  const handleGithubLogin = async () => {
+    const GITHUB_CLIENT_ID = import.meta.env.VITE_GITHUB_CLIENT_ID;
+    const REDIRECT_URI = "http://localhost:5173/auth/github/callback";
+    const state = Math.random().toString(36).substring(2);
+
+    localStorage.setItem("github_oauth_state", state);
+
+    try {
+      const data = await githubAuthLogin({
+        redirectUri: REDIRECT_URI,
+        redirect_uri: REDIRECT_URI,
+        state,
+      });
+
+      const redirectUrl =
+        data?.redirectUrl ||
+        data?.redirect_url ||
+        data?.authorizationUrl ||
+        data?.authorization_url ||
+        data?.url;
+
+      if (redirectUrl) {
+        window.location.href = redirectUrl;
+        return;
+      }
+    } catch (error) {
+      console.warn("GitHub 로그인 API 호출 실패. 프론트 OAuth URL로 전환합니다.", error);
+    }
+
+    if (!GITHUB_CLIENT_ID) {
+      showToast("GitHub Client ID가 설정되지 않았습니다.");
+      return;
+    }
+
+    const githubURL = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&redirect_uri=${encodeURIComponent(
+      REDIRECT_URI
+    )}&scope=read:user user:email repo&state=${state}`;
+
+    window.location.href = githubURL;
+  };
+
   return (
     <main className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-6">
       <section className="w-full max-w-[460px] bg-white border border-[#e2e8f0] rounded-[28px] p-[36px] shadow-[0_10px_30px_rgba(15,23,42,0.08)]">
@@ -281,21 +322,26 @@ export default function Login() {
                 </svg>
               </button>
 
-              {["구글 로그인", "GitHub 로그인"].map((label) => (
-                <button
-                  key={label}
-                  type="button"
-                  aria-label={label}
-                  title={label}
-                  onClick={showSocialLoginNotice}
-                  className="relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-[#e2e8f0] bg-white text-[#0f172a] shadow-[0_6px_18px_rgba(15,23,42,0.04)] transition hover:-translate-y-0.5 hover:bg-[#f1f5f9]"
-                >
-                  <span className="text-sm font-black">
-                    {label.includes("GitHub") ? "GH" : "G"}
-                  </span>
-                  <span className="absolute right-[5px] top-1 h-2 w-2 rounded-full border-2 border-white bg-[#f59e0b]" />
-                </button>
-              ))}
+              <button
+                type="button"
+                aria-label="구글 로그인"
+                title="구글 로그인"
+                onClick={showSocialLoginNotice}
+                className="relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-[#e2e8f0] bg-white text-[#0f172a] shadow-[0_6px_18px_rgba(15,23,42,0.04)] transition hover:-translate-y-0.5 hover:bg-[#f1f5f9]"
+              >
+                <span className="text-sm font-black">G</span>
+                <span className="absolute right-[5px] top-1 h-2 w-2 rounded-full border-2 border-white bg-[#f59e0b]" />
+              </button>
+
+              <button
+                type="button"
+                aria-label="GitHub 로그인"
+                title="GitHub 로그인"
+                onClick={handleGithubLogin}
+                className="relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-[#e2e8f0] bg-white text-[#0f172a] shadow-[0_6px_18px_rgba(15,23,42,0.04)] transition hover:-translate-y-0.5 hover:bg-[#f1f5f9]"
+              >
+                <span className="text-sm font-black">GH</span>
+              </button>
             </div>
           </div>
 
@@ -304,7 +350,7 @@ export default function Login() {
               인증 연동 안내
             </strong>
             백엔드 API 연결을 먼저 시도하고, 서버가 준비되지 않은 경우에만
-            시연용 localStorage 로그인으로 동작합니다.
+            시연용 localStorage 로그인으로 동작합니다. GitHub 로그인은 OAuth 흐름으로 이동합니다.
           </div>
         </form>
 

@@ -13,6 +13,7 @@ import Interview from "../pages/Interview.jsx";
 import MyPage from "../pages/MyPage.jsx";
 import KakaoCallback from "../pages/KakaoCallback.jsx";
 import NaverCallback from "../pages/NaverCallback.jsx";
+import GithubCallback from "../pages/GithubCallback.jsx";
 
 const router = createBrowserRouter([
   {
@@ -22,7 +23,11 @@ const router = createBrowserRouter([
 
   {
     path: "/home",
-    element: <Home />,
+    element: (
+      <ProtectedRoute>
+        <Home />
+      </ProtectedRoute>
+    ),
   },
 
   {
@@ -88,6 +93,11 @@ const router = createBrowserRouter([
   {
     path: "/auth/naver/callback",
     element: <NaverCallback />,
+  },
+
+  {
+    path: "/auth/github/callback",
+    element: <GithubCallback />,
   },
 ]);
 

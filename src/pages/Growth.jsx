@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -308,12 +308,39 @@ function getPrimaryAction(careerScores) {
 export default function Growth() {
   const [toast, setToast] = useState("");
   const [selectedCompany, setSelectedCompany] = useState(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
-  const careerScores = useMemo(() => getCareerScores(), []);
-  const readinessData = useMemo(() => getReadinessData(), []);
+  const refreshGrowthData = () => {
+    setRefreshKey((prev) => prev + 1);
+  };
+
+  useEffect(() => {
+    window.addEventListener("focus", refreshGrowthData);
+    window.addEventListener("storage", refreshGrowthData);
+    window.addEventListener("careerScoreChanged", refreshGrowthData);
+    window.addEventListener("articlue:career-score-changed", refreshGrowthData);
+    window.addEventListener("articlue-career-score-change", refreshGrowthData);
+    window.addEventListener("articlue:data-updated", refreshGrowthData);
+    window.addEventListener("articlue:resume-updated", refreshGrowthData);
+    window.addEventListener("articlue:profile-updated", refreshGrowthData);
+
+    return () => {
+      window.removeEventListener("focus", refreshGrowthData);
+      window.removeEventListener("storage", refreshGrowthData);
+      window.removeEventListener("careerScoreChanged", refreshGrowthData);
+      window.removeEventListener("articlue:career-score-changed", refreshGrowthData);
+      window.removeEventListener("articlue-career-score-change", refreshGrowthData);
+      window.removeEventListener("articlue:data-updated", refreshGrowthData);
+      window.removeEventListener("articlue:resume-updated", refreshGrowthData);
+      window.removeEventListener("articlue:profile-updated", refreshGrowthData);
+    };
+  }, []);
+
+  const careerScores = useMemo(() => getCareerScores(), [refreshKey]);
+  const readinessData = useMemo(() => getReadinessData(), [refreshKey]);
   const readinessStatus = getReadinessStatus(careerScores.overall);
 
-  const recommendedCompanies = useMemo(() => buildDynamicCompanies(), []);
+  const recommendedCompanies = useMemo(() => buildDynamicCompanies(), [refreshKey]);
 
   const radarData = scores.map(([subject, score]) => ({
     subject,
@@ -396,6 +423,10 @@ export default function Growth() {
             기술 스택과 프로젝트 경험을 기업 직무 기준으로 다시 해석해, 부족한
             역량·보완 이유·다음 액션을 한 화면에서 정리합니다.
           </p>
+
+          <div className="mt-[14px] inline-flex rounded-full border border-white/25 bg-white/15 px-3 py-2 text-[12px] font-black text-white/95">
+            계산 기준: 이력서 · 자소서 · 면접 · 기술스택 입력값
+          </div>
 
           <div className="mt-5 flex flex-wrap gap-[10px]">
             <button

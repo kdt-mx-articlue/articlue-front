@@ -366,12 +366,29 @@ export default function MyPage() {
       refreshParserSummary();
     };
 
+    const handleDataUpdated = () => {
+      refreshPageData();
+      refreshParserSummary();
+    };
+
     window.addEventListener("storage", handleStorage);
     window.addEventListener("focus", handleFocus);
+    window.addEventListener("careerScoreChanged", handleDataUpdated);
+    window.addEventListener("articlue:career-score-changed", handleDataUpdated);
+    window.addEventListener("articlue-career-score-change", handleDataUpdated);
+    window.addEventListener("articlue:data-updated", handleDataUpdated);
+    window.addEventListener("articlue:resume-updated", handleDataUpdated);
+    window.addEventListener("articlue:profile-updated", handleDataUpdated);
 
     return () => {
       window.removeEventListener("storage", handleStorage);
       window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("careerScoreChanged", handleDataUpdated);
+      window.removeEventListener("articlue:career-score-changed", handleDataUpdated);
+      window.removeEventListener("articlue-career-score-change", handleDataUpdated);
+      window.removeEventListener("articlue:data-updated", handleDataUpdated);
+      window.removeEventListener("articlue:resume-updated", handleDataUpdated);
+      window.removeEventListener("articlue:profile-updated", handleDataUpdated);
     };
   }, [navigate, profileEditing]);
 
@@ -408,6 +425,7 @@ export default function MyPage() {
     const next = favorites.filter((job) => String(job.id) !== String(id));
     setFavorites(next);
     saveFavoriteJobs(next);
+    window.dispatchEvent(new Event("articlue:data-updated"));
     showToast("찜한 공고에서 삭제했습니다.");
   };
 
@@ -502,6 +520,8 @@ export default function MyPage() {
       return;
     }
 
+    let profileSaveMode = "server";
+
     try {
       await updateProfileApi(nextProfile);
       saveUserProfileLocal(nextProfile);
@@ -509,12 +529,14 @@ export default function MyPage() {
       try {
         await createProfile(nextProfile);
         saveUserProfileLocal(nextProfile);
+        profileSaveMode = "server-created";
       } catch (createError) {
         console.warn(
           "프로필 API 저장 실패. localStorage 프로필 저장으로 대체합니다.",
           { updateError, createError }
         );
         saveUserProfileLocal(nextProfile);
+        profileSaveMode = "fallback";
       }
     }
 
@@ -540,8 +562,14 @@ export default function MyPage() {
     setProfileDraft(nextProfile);
     setProfileEditing(false);
     notifyCareerScoreChanged();
+    window.dispatchEvent(new Event("articlue:profile-updated"));
+    window.dispatchEvent(new Event("articlue:data-updated"));
     refreshParserSummary();
-    showToast("프로필 정보가 저장되었습니다.");
+    showToast(
+      profileSaveMode === "fallback"
+        ? "프로필 정보가 시연용 저장소에 저장되었습니다."
+        : "프로필 정보가 서버와 동기화되었습니다."
+    );
   };
 
   const profileFields = [
@@ -627,6 +655,10 @@ export default function MyPage() {
               찜한 기업 공고, 생성한 이력서, 면접 리포트, 성장 진단 결과를
               연결해 지금 가장 먼저 해야 할 준비를 보여줍니다.
             </p>
+
+            <div className="mt-[14px] inline-flex rounded-full border border-white/25 bg-white/15 px-3 py-2 text-[12px] font-black text-white/95">
+              현재 화면 데이터는 서버 응답 실패 시 시연용 저장소 값을 함께 사용합니다.
+            </div>
 
             <div className="mt-[18px] flex flex-wrap gap-[10px]">
               <Link

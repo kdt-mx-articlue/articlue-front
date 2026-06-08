@@ -567,6 +567,7 @@ export default function Resume() {
   const [missingItems, setMissingItems] = useState([]);
   const [userProfile, setUserProfile] = useState(() => getUserProfile());
   const [resumeId, setResumeId] = useState(() => getActiveResumeId());
+  const [resumeApiStatus, setResumeApiStatus] = useState("checking");
   const formRef = useRef(form);
   const techStacksRef = useRef(techStacks);
   const experiencesRef = useRef(experiences);
@@ -623,14 +624,21 @@ export default function Resume() {
     let ignore = false;
 
     const initializeResume = async () => {
+      setResumeApiStatus("checking");
+
       try {
         const id = await ensureActiveResume(getResumeDraft({}));
 
-        if (!ignore) {
-          setResumeId(id || "");
-        }
+        if (ignore) return;
+
+        setResumeId(id || "");
+        setResumeApiStatus(id ? "connected" : "fallback");
       } catch (error) {
         console.warn("resume 생성 실패: localStorage fallback을 유지합니다.", error);
+
+        if (!ignore) {
+          setResumeApiStatus("fallback");
+        }
       }
     };
 
@@ -1111,7 +1119,11 @@ export default function Resume() {
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="min-w-[320px] flex-1">
             <div className="mb-[7px] text-[13px] font-black text-emerald-600">
-              자동 저장됨{resumeId ? ` · Resume ID ${resumeId}` : ""} · <strong>{progress}% 완료</strong>
+              {resumeApiStatus === "checking"
+                ? "저장소 확인 중"
+                : resumeApiStatus === "connected" && resumeId
+                  ? `자동 저장됨 · Resume ID ${resumeId}`
+                  : "시연용 저장소에 자동 저장됨 · API 연결 대기"} · <strong>{progress}% 완료</strong>
             </div>
             <div className="h-[9px] overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
               <div

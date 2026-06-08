@@ -225,6 +225,9 @@ export default function Home() {
     window.addEventListener("careerScoreChanged", handleRefresh);
     window.addEventListener("articlue:career-score-changed", handleRefresh);
     window.addEventListener("articlue-career-score-change", handleRefresh);
+    window.addEventListener("articlue:data-updated", handleRefresh);
+    window.addEventListener("articlue:resume-updated", handleRefresh);
+    window.addEventListener("articlue:profile-updated", handleRefresh);
 
     return () => {
       window.removeEventListener("focus", handleRefresh);
@@ -232,6 +235,9 @@ export default function Home() {
       window.removeEventListener("careerScoreChanged", handleRefresh);
       window.removeEventListener("articlue:career-score-changed", handleRefresh);
       window.removeEventListener("articlue-career-score-change", handleRefresh);
+      window.removeEventListener("articlue:data-updated", handleRefresh);
+      window.removeEventListener("articlue:resume-updated", handleRefresh);
+      window.removeEventListener("articlue:profile-updated", handleRefresh);
     };
   }, []);
 
@@ -279,9 +285,14 @@ export default function Home() {
 
       <section className="relative mb-[22px] grid grid-cols-[minmax(0,1fr)_240px] items-center gap-8 overflow-hidden rounded-[30px] bg-gradient-to-br from-[#1e3a8a] via-[#2563eb] to-[#60a5fa] p-[34px] text-white shadow-[0_18px_55px_rgba(37,99,235,0.12)]">
         <div className="relative z-10">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/15 px-3 py-2 text-[13px] font-black">
-            <span className="h-2 w-2 rounded-full bg-green-400" />
-            오늘의 커리어 대시보드
+          <div className="mb-4 flex flex-wrap gap-2">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/15 px-3 py-2 text-[13px] font-black">
+              <span className="h-2 w-2 rounded-full bg-green-400" />
+              오늘의 커리어 대시보드
+            </div>
+            <div className="inline-flex items-center rounded-full border border-white/20 bg-white/15 px-3 py-2 text-[12px] font-black">
+              시연 저장소 기반 데이터 표시
+            </div>
           </div>
 
           <h2 className="mb-[14px] text-[31px] font-extrabold leading-[1.36] tracking-[-0.15px]">
