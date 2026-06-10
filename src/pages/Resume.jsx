@@ -74,6 +74,7 @@ function sanitizeTechStacks(techs) {
 
 const initialForm = {
   title: "",
+  loginId: "",
   name: "",
   phone: "",
   email: "",
@@ -178,10 +179,33 @@ function getSectionRatio(values) {
   return completed / values.length;
 }
 
+function getStoredLoginId() {
+  if (typeof window === "undefined") return "";
+
+  const storageKeys = ["articlue_current_user", USER_PROFILE_KEY];
+
+  for (const key of storageKeys) {
+    try {
+      const raw = window.localStorage.getItem(key);
+      if (!raw) continue;
+
+      const data = JSON.parse(raw);
+      const loginId = data?.loginId || data?.member?.loginId || data?.user?.loginId;
+
+      if (hasText(loginId)) return String(loginId).trim();
+    } catch {
+      // 저장된 로그인 정보 파싱 실패 시 다음 저장소를 확인합니다.
+    }
+  }
+
+  return "";
+}
+
 function getProfileFormFields() {
   const profile = getUserProfile();
 
   return {
+    loginId: profile?.loginId || getStoredLoginId(),
     name: profile?.name || "",
     phone: profile?.phone || "",
     email: profile?.email || "",
@@ -848,6 +872,7 @@ export default function Resume() {
 
   const updateForm = (key, value) => {
     const readOnlyProfileKeys = [
+      "loginId",
       "name",
       "phone",
       "email",
@@ -1260,6 +1285,7 @@ export default function Resume() {
 
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             {[
+              ["회원 아이디", form.loginId || userProfile?.loginId || getStoredLoginId()],
               ["이름", form.name],
               ["닉네임", userProfile?.nickname],
               ["이메일", form.email],

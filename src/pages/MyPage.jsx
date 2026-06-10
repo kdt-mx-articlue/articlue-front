@@ -45,6 +45,11 @@ function normalizeProfileResponse(data, fallbackProfile) {
   return {
     ...fallbackProfile,
     ...profile,
+    loginId:
+      profile?.loginId ||
+      fallbackProfile?.loginId ||
+      getCurrentUser()?.loginId ||
+      "",
     name: profile?.name || fallbackProfile?.name || "사용자",
     nickname: profile?.nickname || fallbackProfile?.nickname || "",
     email: profile?.email || fallbackProfile?.email || "",
@@ -79,7 +84,13 @@ async function readUserProfileFromApiFirst() {
 }
 
 function readUserProfile() {
-  return getUserProfile();
+  const profile = getUserProfile();
+  const currentUser = getCurrentUser();
+
+  return {
+    ...profile,
+    loginId: profile?.loginId || currentUser?.loginId || "",
+  };
 }
 
 function readFavoriteJobs() {
@@ -494,6 +505,11 @@ export default function MyPage() {
     const trimmedDetailAddress = (profileDraft.detailAddress || "").trim();
 
     const nextProfile = {
+      loginId:
+        profileDraft.loginId ||
+        userProfile.loginId ||
+        getCurrentUser()?.loginId ||
+        "",
       name: profileDraft.name.trim(),
       nickname: profileDraft.nickname.trim(),
       email: profileDraft.email.trim().toLowerCase(),
@@ -573,6 +589,7 @@ export default function MyPage() {
   };
 
   const profileFields = [
+    ["loginId", "회원 아이디", "text", "회원 아이디"],
     ["name", "이름", "text", "이름 입력"],
     ["nickname", "닉네임", "text", "닉네임 입력"],
     ["email", "이메일", "email", "example@email.com"],
@@ -821,13 +838,13 @@ export default function MyPage() {
                     <input
                       type={type}
                       value={profileDraft[key] || ""}
-                      readOnly={!profileEditing}
+                      readOnly={key === "loginId" || !profileEditing}
                       placeholder={placeholder}
                       onChange={(event) =>
                         updateProfileDraft(key, event.target.value)
                       }
                       className={`h-[46px] w-full rounded-2xl border px-3 text-[13px] font-bold outline-none transition ${
-                        profileEditing
+                        profileEditing && key !== "loginId"
                           ? "border-blue-200 bg-white text-slate-900 focus:border-blue-600 dark:border-blue-800 dark:bg-slate-900 dark:text-white"
                           : "border-slate-200 bg-slate-100 text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400"
                       }`}
