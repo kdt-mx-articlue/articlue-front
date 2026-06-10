@@ -1,11 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { openAddressSearch } from "../utils/postcode.js";
-import { saveAuthUser } from "../utils/auth.js";
 import { signup } from "../services/authApi.js";
-
-const USER_PROFILE_KEY = "articlue_user_profile";
-const PROFILE_NAME_KEY = "articlue_profile_name";
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -79,39 +75,6 @@ export default function Signup() {
     setTimeout(() => setToast(""), 2500);
   };
 
-  const getSavedUsers = () => {
-    try {
-      return JSON.parse(localStorage.getItem("articlue_users")) || [];
-    } catch {
-      return [];
-    }
-  };
-
-  const saveUserFallback = (user) => {
-    const users = getSavedUsers();
-    localStorage.setItem("articlue_users", JSON.stringify([...users, user]));
-  };
-
-  const saveSignupLoginStateFallback = (userProfile) => {
-    const loginAt = Date.now();
-
-    const currentUser = {
-      name: userProfile.name,
-      nickname: userProfile.nickname,
-      email: userProfile.email,
-      provider: "local",
-      loginType: "local",
-      loginAt,
-    };
-
-    localStorage.setItem("isLogin", "true");
-    localStorage.setItem("articlue_current_user", JSON.stringify(currentUser));
-    localStorage.setItem("articlue_login_type", "local");
-    localStorage.setItem("articlue_login_at", String(loginAt));
-    localStorage.setItem(PROFILE_NAME_KEY, userProfile.name);
-    localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(userProfile));
-  };
-
   const handleAddressSearch = () => {
     openAddressSearch((data) => {
       setPostcode(data.zonecode || "");
@@ -181,21 +144,6 @@ export default function Signup() {
       .filter(Boolean)
       .join(" ");
 
-    const userProfile = {
-      name: trimmedName,
-      nickname: trimmedNickname,
-      email: normalizedEmail,
-      phone: trimmedPhone,
-      birth,
-      postcode: trimmedPostcode,
-      address: fullAddress,
-      baseAddress: trimmedAddress,
-      detailAddress: trimmedDetailAddress,
-      gender,
-      military,
-      createdAt: new Date().toISOString(),
-    };
-
     const signupPayload = {
       name: trimmedName,
       nickname: trimmedNickname,
@@ -214,56 +162,21 @@ export default function Signup() {
     setLoading(true);
 
     try {
-      const data = await signup(signupPayload);
-      const user = data?.member || data?.user || data?.data || data || {};
+      await signup(signupPayload);
 
-      saveAuthUser({
-        name: user?.name || trimmedName,
-        nickname: user?.nickname || trimmedNickname,
-        email: user?.email || normalizedEmail,
-        loginType: "local",
-        provider: "local",
-        loginAt: new Date().toISOString(),
-      });
-
-      localStorage.setItem(PROFILE_NAME_KEY, user?.name || trimmedName);
-      localStorage.setItem(
-        USER_PROFILE_KEY,
-        JSON.stringify({
-          ...userProfile,
-          ...user,
-        })
-      );
-
-      showToast("회원가입이 완료되었습니다. 홈으로 이동합니다.");
+      showToast("회원가입이 완료되었습니다. 로그인 화면으로 이동합니다.");
 
       setTimeout(() => {
-        navigate("/home", { replace: true });
+        navigate("/login", { replace: true });
       }, 800);
     } catch (error) {
-      console.warn("API 회원가입 실패. 시연용 localStorage 회원가입으로 전환합니다.", error);
+      console.error("회원가입 실패:", error);
 
-      const users = getSavedUsers();
-      const duplicatedUser = users.some((user) => user.email === normalizedEmail);
-
-      if (duplicatedUser) {
-        showToast("이미 가입된 이메일입니다. 로그인해 주세요.");
-        setLoading(false);
-        return;
-      }
-
-      saveUserFallback({
-        ...userProfile,
-        password,
-      });
-
-      saveSignupLoginStateFallback(userProfile);
-
-      showToast("회원가입이 완료되었습니다. 홈으로 이동합니다.");
-
-      setTimeout(() => {
-        navigate("/home", { replace: true });
-      }, 800);
+      showToast(
+        error?.userMessage ||
+          error?.message ||
+          "회원가입에 실패했습니다. 입력 정보를 다시 확인해 주세요."
+      );
     } finally {
       setLoading(false);
     }
@@ -290,7 +203,7 @@ export default function Signup() {
         </h1>
 
         <p className="mb-8 text-center text-sm leading-7 text-slate-600">
-          회원가입이 완료되면 자동 로그인되어 홈 화면으로 이동합니다.
+          회원가입이 완료되면 로그인 화면으로 이동합니다.
         </p>
 
         <form onSubmit={handleSignup}>
@@ -527,9 +440,15 @@ export default function Signup() {
                 안전한 비밀번호 조건
               </p>
 
-              <PasswordRule valid={passwordStatus.length}>• 8자 이상 입력</PasswordRule>
-              <PasswordRule valid={passwordStatus.lower}>• 영문 소문자 포함</PasswordRule>
-              <PasswordRule valid={passwordStatus.number}>• 숫자 포함</PasswordRule>
+              <PasswordRule valid={passwordStatus.length}>
+                • 8자 이상 입력
+              </PasswordRule>
+              <PasswordRule valid={passwordStatus.lower}>
+                • 영문 소문자 포함
+              </PasswordRule>
+              <PasswordRule valid={passwordStatus.number}>
+                • 숫자 포함
+              </PasswordRule>
               <PasswordRule valid={passwordStatus.special}>
                 • 특수문자 포함 (!@#$%^&* 등)
               </PasswordRule>
@@ -590,7 +509,7 @@ export default function Signup() {
             disabled={loading}
             className="mt-2.5 h-[54px] w-full rounded-full bg-blue-600 text-[15px] font-black text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {loading ? "회원가입 중..." : "회원가입 후 바로 시작하기"}
+            {loading ? "회원가입 중..." : "회원가입 완료하기"}
           </button>
         </form>
 
