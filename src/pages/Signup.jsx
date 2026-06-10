@@ -149,20 +149,21 @@ export default function Signup() {
       .join(" ");
 
     const signupPayload = {
-      loginId: trimmedLoginId,
-      name: trimmedName,
-      nickname: trimmedNickname,
-      email: normalizedEmail,
-      password,
-      phone: trimmedPhone,
-      birth,
-      postcode: trimmedPostcode,
-      address: fullAddress,
-      baseAddress: trimmedAddress,
-      detailAddress: trimmedDetailAddress,
-      gender,
-      military,
-    };
+  loginId: trimmedLoginId,
+  name: trimmedName,
+  nickname: trimmedNickname,
+  email: normalizedEmail,
+  password,
+  passwordConfirm,
+  phone: trimmedPhone,
+  birth,
+  postcode: trimmedPostcode,
+  address: fullAddress,
+  baseAddress: trimmedAddress,
+  detailAddress: trimmedDetailAddress,
+  gender,
+  military,
+};
 
     setLoading(true);
 
