@@ -6,10 +6,10 @@ import { githubAuthLogin, login } from "../services/authApi.js";
 export default function Login() {
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState("");
+  const [loginId, setLoginId] = useState("");
   const [password, setPassword] = useState("");
 
-  const [emailError, setEmailError] = useState(false);
+  const [loginIdError, setLoginIdError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
   const [toast, setToast] = useState("");
   const [loading, setLoading] = useState(false);
@@ -33,16 +33,16 @@ export default function Login() {
     navigate(redirectPath, { replace: true });
   };
 
-  const loginWithFallback = (normalizedEmail) => {
+  const loginWithFallback = (trimmedLoginId) => {
     const users = getSavedUsers();
 
     const matchedUser = users.find(
-      (user) => user.email?.trim().toLowerCase() === normalizedEmail
+      (user) => user.loginId?.trim() === trimmedLoginId
     );
 
     if (!matchedUser) {
-      setEmailError(true);
-      showToast("가입된 회원 정보가 없습니다. 회원가입 후 이용해 주세요.");
+      setLoginIdError(true);
+      showToast("가입된 회원 아이디가 없습니다. 회원가입 후 이용해 주세요.");
       return false;
     }
 
@@ -54,7 +54,9 @@ export default function Login() {
 
     saveAuthUser({
       name: matchedUser.name || "Articlue 사용자",
-      email: matchedUser.email,
+      nickname: matchedUser.nickname || "",
+      loginId: matchedUser.loginId,
+      email: matchedUser.email || "",
       loginType: "local",
       provider: "local",
       loginAt: new Date().toISOString(),
@@ -69,14 +71,14 @@ export default function Login() {
   const handleLogin = async (event) => {
     event.preventDefault();
 
-    setEmailError(false);
+    setLoginIdError(false);
     setPasswordError(false);
 
-    const normalizedEmail = email.trim().toLowerCase();
+    const trimmedLoginId = loginId.trim();
 
-    if (!normalizedEmail) {
-      setEmailError(true);
-      showToast("이메일을 입력해 주세요.");
+    if (!trimmedLoginId) {
+      setLoginIdError(true);
+      showToast("회원 아이디를 입력해 주세요.");
       return;
     }
 
@@ -90,7 +92,7 @@ export default function Login() {
 
     try {
       const data = await login({
-        email: normalizedEmail,
+        loginId: trimmedLoginId,
         password,
       });
 
@@ -98,7 +100,9 @@ export default function Login() {
 
       saveAuthUser({
         name: user?.name || user?.nickname || "Articlue 사용자",
-        email: user?.email || normalizedEmail,
+        nickname: user?.nickname || "",
+        loginId: user?.loginId || trimmedLoginId,
+        email: user?.email || "",
         loginType: "local",
         provider: "local",
         loginAt: new Date().toISOString(),
@@ -108,7 +112,7 @@ export default function Login() {
       setTimeout(moveAfterLogin, 800);
     } catch (error) {
       console.warn("API 로그인 실패. 시연용 localStorage 로그인으로 전환합니다.", error);
-      loginWithFallback(normalizedEmail);
+      loginWithFallback(trimmedLoginId);
     } finally {
       setLoading(false);
     }
@@ -218,30 +222,30 @@ export default function Login() {
         <form onSubmit={handleLogin}>
           <div className="mb-[18px]">
             <label
-              htmlFor="loginEmailInput"
+              htmlFor="loginIdInput"
               className="mb-2 block text-[14px] font-extrabold text-[#0f172a]"
             >
-              이메일
+              회원 아이디
             </label>
 
             <input
-              id="loginEmailInput"
-              type="email"
-              placeholder="example@email.com"
-              autoComplete="email"
+              id="loginIdInput"
+              type="text"
+              placeholder="회원 아이디 입력"
+              autoComplete="username"
               required
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
+              value={loginId}
+              onChange={(event) => setLoginId(event.target.value)}
               className={`h-[52px] w-full rounded-2xl border px-4 text-[15px] text-[#0f172a] outline-none ${
-                emailError
+                loginIdError
                   ? "border-[#ef4444] bg-[#fef2f2]"
                   : "border-[#e2e8f0] bg-[#f1f5f9] focus:border-[#2563eb]"
               }`}
             />
 
-            {emailError && (
+            {loginIdError && (
               <div className="mt-2 text-[12px] font-black text-[#ef4444]">
-                가입되지 않은 이메일입니다.
+                가입되지 않은 회원 아이디입니다.
               </div>
             )}
           </div>

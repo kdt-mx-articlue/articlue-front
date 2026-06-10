@@ -6,6 +6,7 @@ import { signup } from "../services/authApi.js";
 export default function Signup() {
   const navigate = useNavigate();
 
+  const [loginId, setLoginId] = useState("");
   const [name, setName] = useState("");
   const [nickname, setNickname] = useState("");
   const [email, setEmail] = useState("");
@@ -95,6 +96,7 @@ export default function Signup() {
   };
 
   const validateForm = () => {
+    const trimmedLoginId = loginId.trim();
     const trimmedName = name.trim();
     const trimmedNickname = nickname.trim();
     const normalizedEmail = email.trim().toLowerCase();
@@ -103,6 +105,7 @@ export default function Signup() {
     const trimmedAddress = address.trim();
     const trimmedDetailAddress = detailAddress.trim();
 
+    if (!trimmedLoginId) return showToast("회원 아이디를 입력해 주세요.");
     if (!trimmedName) return showToast("이름을 입력해 주세요.");
     if (!trimmedNickname) return showToast("닉네임을 입력해 주세요.");
     if (!normalizedEmail) return showToast("이메일을 입력해 주세요.");
@@ -132,6 +135,7 @@ export default function Signup() {
     const valid = validateForm();
     if (valid !== true) return;
 
+    const trimmedLoginId = loginId.trim();
     const trimmedName = name.trim();
     const trimmedNickname = nickname.trim();
     const normalizedEmail = email.trim().toLowerCase();
@@ -145,6 +149,7 @@ export default function Signup() {
       .join(" ");
 
     const signupPayload = {
+      loginId: trimmedLoginId,
       name: trimmedName,
       nickname: trimmedNickname,
       email: normalizedEmail,
@@ -208,6 +213,25 @@ export default function Signup() {
 
         <form onSubmit={handleSignup}>
           <div className="grid grid-cols-2 gap-4">
+            <div className="mb-[18px]">
+              <label
+                htmlFor="signupLoginIdInput"
+                className="mb-2 block text-sm font-extrabold text-slate-900"
+              >
+                회원 아이디
+              </label>
+              <input
+                id="signupLoginIdInput"
+                type="text"
+                className={inputClass}
+                placeholder="로그인에 사용할 아이디 입력"
+                autoComplete="username"
+                value={loginId}
+                onChange={(event) => setLoginId(event.target.value)}
+                required
+              />
+            </div>
+
             <div className="mb-[18px]">
               <label
                 htmlFor="signupNameInput"
@@ -440,15 +464,9 @@ export default function Signup() {
                 안전한 비밀번호 조건
               </p>
 
-              <PasswordRule valid={passwordStatus.length}>
-                • 8자 이상 입력
-              </PasswordRule>
-              <PasswordRule valid={passwordStatus.lower}>
-                • 영문 소문자 포함
-              </PasswordRule>
-              <PasswordRule valid={passwordStatus.number}>
-                • 숫자 포함
-              </PasswordRule>
+              <PasswordRule valid={passwordStatus.length}>• 8자 이상 입력</PasswordRule>
+              <PasswordRule valid={passwordStatus.lower}>• 영문 소문자 포함</PasswordRule>
+              <PasswordRule valid={passwordStatus.number}>• 숫자 포함</PasswordRule>
               <PasswordRule valid={passwordStatus.special}>
                 • 특수문자 포함 (!@#$%^&* 등)
               </PasswordRule>
