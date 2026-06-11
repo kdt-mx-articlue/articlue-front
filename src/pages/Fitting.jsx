@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import AppLayout from "../components/AppLayout.jsx";
+import JobFitRadarChart from "../components/JobFitRadarChart.jsx";
+import JobFitInsightCard from "../components/JobFitInsightCard.jsx";
 import {
   getFavoriteJobs,
   toggleFavoriteJob as toggleFavoriteJobFromService,
@@ -8,6 +10,10 @@ import {
 import { saveCoverLetter } from "../services/coverLetterService.js";
 import { saveInterviewTarget } from "../services/interviewService.js";
 import { markResumeContinue } from "../services/resumeService.js";
+import {
+  getDefaultRadarData,
+  getJobFitRadarDataset,
+} from "../services/jobFitService.js";
 import { notifyCareerScoreChanged } from "../utils/careerScore.js";
 
 const companies = [
@@ -138,11 +144,35 @@ export default function Fitting() {
   const [favorites, setFavorites] = useState([]);
   const [toast, setToast] = useState("");
   const [essayModal, setEssayModal] = useState(null);
+  const [jobFitDataset, setJobFitDataset] = useState([]);
+  const [jobFitLoading, setJobFitLoading] = useState(true);
+  const [jobFitError, setJobFitError] = useState("");
 
   const selected = useMemo(
     () => companies.find((company) => company.id === selectedId) || companies[0],
     [selectedId]
   );
+
+  const selectedJobFit = useMemo(() => {
+    if (!jobFitDataset.length) return null;
+
+    const exactMatch = jobFitDataset.find(
+      (job) => job.companyName === selected.company
+    );
+
+    if (exactMatch) return exactMatch;
+
+    const partialMatch = jobFitDataset.find(
+      (job) =>
+        job.companyName.includes(selected.company) ||
+        selected.company.includes(job.companyName)
+    );
+
+    return partialMatch || jobFitDataset[0];
+  }, [jobFitDataset, selected.company]);
+
+  const selectedRadarData = selectedJobFit?.radarData || getDefaultRadarData();
+  const selectedOverallMatch = selectedJobFit?.overallMatch || Number(selected.score.replace("%", ""));
 
   useEffect(() => {
     const companyName = searchParams.get("company");
@@ -158,6 +188,41 @@ export default function Fitting() {
 
   useEffect(() => {
     setFavorites(getFavoriteJobs());
+  }, []);
+
+  useEffect(() => {
+    let ignore = false;
+
+    const loadJobFitData = async () => {
+      setJobFitLoading(true);
+      setJobFitError("");
+
+      try {
+        const dataset = await getJobFitRadarDataset();
+
+        if (!ignore) {
+          setJobFitDataset(dataset);
+        }
+      } catch (error) {
+        console.error("직무 적합도 데이터 로딩 실패:", error);
+
+        if (!ignore) {
+          setJobFitError(
+            error?.message || "직무 적합도 데이터를 불러오지 못했습니다."
+          );
+        }
+      } finally {
+        if (!ignore) {
+          setJobFitLoading(false);
+        }
+      }
+    };
+
+    loadJobFitData();
+
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   const showToast = (message) => {
@@ -252,15 +317,18 @@ export default function Fitting() {
 
             <div className="mb-[10px]">
               <strong className="block text-[34px] font-black leading-none tracking-[-1px]">
-                92%
+                {selectedOverallMatch}%
               </strong>
               <span className="mt-2 block text-[13px] font-extrabold opacity-90">
-                네이버웹툰 · Backend
+                {selected.company} · {selected.role}
               </span>
             </div>
 
             <div className="mb-3 h-[9px] overflow-hidden rounded-full bg-white/20">
-              <div className="h-full w-[92%] rounded-full bg-white" />
+              <div
+                className="h-full rounded-full bg-white"
+                style={{ width: `${selectedOverallMatch}%` }}
+              />
             </div>
 
             <div className="flex flex-wrap gap-[7px]">
@@ -471,6 +539,81 @@ export default function Fitting() {
               </button>
             </div>
           </aside>
+
+          <section
+            className="grid grid-cols-[minmax(0,1fr)_320px] gap-4"
+            aria-label="직무 적합도 방사형 그래프"
+          >
+            <JobFitRadarChart
+              data={selectedRadarData}
+              companyName={selected.company}
+              jobTitle={selected.role}
+            />
+
+            <aside className="rounded-[28px] border border-slate-200 bg-white p-[22px] shadow-[0_10px_30px_rgba(15,23,42,0.07)] dark:border-slate-700 dark:bg-slate-900">
+              <div className="mb-3 inline-flex rounded-full bg-blue-50 px-3 py-2 text-[12px] font-black text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                노션 공고 데이터 기반
+              </div>
+
+              <h3 className="mb-3 break-keep text-[20px] font-black tracking-[-0.5px] text-slate-900 dark:text-white">
+                {selected.company} 적합도 요약
+              </h3>
+
+              <div className="mb-4 rounded-[22px] bg-slate-100 p-4 dark:bg-slate-800">
+                <span className="mb-1 block text-[12px] font-black text-slate-500 dark:text-slate-400">
+                  종합 적합도
+                </span>
+                <strong className="text-[38px] font-black tracking-[-1px] text-emerald-600 dark:text-emerald-400">
+                  {selectedOverallMatch}%
+                </strong>
+                <div className="mt-3 h-[9px] overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-blue-600 to-emerald-500"
+                    style={{ width: `${selectedOverallMatch}%` }}
+                  />
+                </div>
+              </div>
+
+              {jobFitLoading ? (
+                <p className="break-keep rounded-[18px] border border-blue-100 bg-blue-50 px-4 py-3 text-[13px] font-bold leading-[1.6] text-blue-700 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-300">
+                  공고 데이터를 불러오는 중입니다.
+                </p>
+              ) : jobFitError ? (
+                <p className="break-keep rounded-[18px] border border-red-100 bg-red-50 px-4 py-3 text-[13px] font-bold leading-[1.6] text-red-600 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
+                  {jobFitError}
+                </p>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  <div className="rounded-[18px] border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800">
+                    <span className="mb-1 block text-[12px] font-black text-slate-500 dark:text-slate-400">
+                      분석 공고
+                    </span>
+                    <strong className="break-keep text-[14px] font-black leading-[1.5] text-slate-900 dark:text-white">
+                      {selectedJobFit?.companyName || selected.company} · {selectedJobFit?.jobTitle || selected.role}
+                    </strong>
+                  </div>
+
+                  <div className="rounded-[18px] border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800">
+                    <span className="mb-1 block text-[12px] font-black text-slate-500 dark:text-slate-400">
+                      경력 조건
+                    </span>
+                    <strong className="break-keep text-[14px] font-black leading-[1.5] text-slate-900 dark:text-white">
+                      {selectedJobFit?.careerLevel || "공고 데이터 기준"}
+                    </strong>
+                  </div>
+
+                  <p className="break-keep rounded-[18px] border border-dashed border-slate-300 px-4 py-3 text-[13px] font-bold leading-[1.65] text-slate-600 dark:border-slate-700 dark:text-slate-300">
+                    사용자의 기술스택과 노션 공고 데이터의 기술스택, 요구사항, 우대사항, 업무 내용, 조직문화 키워드를 비교해 방사형 그래프로 표시합니다.
+                  </p>
+                </div>
+              )}
+            </aside>
+          </section>
+
+          <JobFitInsightCard
+            data={selectedRadarData}
+            companyName={selected.company}
+          />
         </section>
       </div>
 

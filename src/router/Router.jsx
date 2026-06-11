@@ -9,6 +9,7 @@ import Signup from "../pages/Signup.jsx";
 import Resume from "../pages/Resume.jsx";
 import Fitting from "../pages/Fitting.jsx";
 import Growth from "../pages/Growth.jsx";
+import Loading from "../pages/Loading.jsx";
 import Interview from "../pages/Interview.jsx";
 import MyPage from "../pages/MyPage.jsx";
 import KakaoCallback from "../pages/KakaoCallback.jsx";
@@ -63,6 +64,15 @@ const router = createBrowserRouter([
     element: (
       <ProtectedRoute>
         <Growth />
+      </ProtectedRoute>
+    ),
+  },
+
+  {
+    path: "/loading",
+    element: (
+      <ProtectedRoute>
+        <Loading />
       </ProtectedRoute>
     ),
   },

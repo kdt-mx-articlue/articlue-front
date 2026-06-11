@@ -96,6 +96,18 @@ function readJson(key, fallback) {
   }
 }
 
+function readAiGrowthResult() {
+  try {
+    const raw = localStorage.getItem("articlue_growth_result");
+
+    if (!raw) return null;
+
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
 function readTechStacks() {
   const parsed = readJson(TECH_STACK_KEY, []);
   if (!Array.isArray(parsed)) return [];
@@ -338,6 +350,7 @@ export default function Growth() {
 
   const careerScores = useMemo(() => getCareerScores(), [refreshKey]);
   const readinessData = useMemo(() => getReadinessData(), [refreshKey]);
+  const aiGrowthResult = useMemo(() => readAiGrowthResult(), [refreshKey]);
   const readinessStatus = getReadinessStatus(careerScores.overall);
 
   const recommendedCompanies = useMemo(() => buildDynamicCompanies(), [refreshKey]);
@@ -427,6 +440,19 @@ export default function Growth() {
             기술 스택과 프로젝트 경험을 기업 직무 기준으로 다시 해석해, 부족한
             역량·보완 이유·다음 액션을 한 화면에서 정리합니다.
           </p>
+
+          {aiGrowthResult && (
+            <div className="mt-4 max-w-[670px] rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-[13px] font-bold leading-6 text-white">
+              <div className="font-black">AI 분석 결과 반영 완료</div>
+              <div>분석 기준 Resume ID : {aiGrowthResult.resumeId || "확인 필요"}</div>
+              <div>
+                분석 시각 : {aiGrowthResult.analyzedAt ? new Date(aiGrowthResult.analyzedAt).toLocaleString() : "확인 필요"}
+              </div>
+              {aiGrowthResult?.data?.status && (
+                <div>분석 상태 : {aiGrowthResult.data.status}</div>
+              )}
+            </div>
+          )}
 
           <div className="mt-5 flex flex-wrap gap-[10px]">
             <Link

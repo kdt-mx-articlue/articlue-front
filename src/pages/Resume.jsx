@@ -1122,12 +1122,41 @@ export default function Resume() {
     forceSubmitResume();
   };
 
-  const forceSubmitResume = () => {
+  const forceSubmitResume = async () => {
     saveResumeProgress(progress);
     markResumeSubmitted();
     notifyCareerScoreChanged();
     setMissingModalOpen(false);
-    setCompleteModalOpen(true);
+
+    const draft = {
+      form: formRef.current || form,
+      techStacks: techStacksRef.current || techStacks,
+      experiences: experiencesRef.current || experiences,
+      essays: essaysRef.current || essays,
+      certificates: certificatesRef.current || certificates,
+      careers: careersRef.current || careers,
+      files: filesRef.current || files,
+      github: githubRef.current || github,
+      updatedAt: new Date().toISOString(),
+    };
+
+    saveResumeDraft(draft);
+    saveDirectResumeBackup(draft);
+    saveEducationSnapshot(draft.form);
+
+    try {
+      const id = await ensureActiveResume(draft);
+      const nextResumeId = id || resumeId || getActiveResumeId() || "temp";
+
+      navigate(`/loading?resumeId=${nextResumeId}`, { replace: true });
+    } catch (error) {
+      console.warn(
+        "이력서 저장 API 호출 실패. 개발용 resumeId로 로딩 페이지로 이동합니다.",
+        error
+      );
+
+      navigate("/loading?resumeId=temp", { replace: true });
+    }
   };
 
   const saveAndExit = () => {
