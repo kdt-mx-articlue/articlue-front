@@ -12,17 +12,24 @@ function safeText(value) {
   return String(value || "").trim();
 }
 
-function splitCsvLine(line) {
-  const result = [];
-  let current = "";
+function normalizeHeader(value) {
+  return safeText(value).replace(/^\uFEFF/, "").trim();
+}
+
+function parseCsvRecords(csvText) {
+  const records = [];
+  let record = [];
+  let field = "";
   let insideQuotes = false;
 
-  for (let index = 0; index < line.length; index += 1) {
-    const char = line[index];
-    const nextChar = line[index + 1];
+  const text = String(csvText || "").replace(/^\uFEFF/, "");
+
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    const nextChar = text[index + 1];
 
     if (char === '"' && nextChar === '"') {
-      current += '"';
+      field += '"';
       index += 1;
       continue;
     }
@@ -33,32 +40,47 @@ function splitCsvLine(line) {
     }
 
     if (char === "," && !insideQuotes) {
-      result.push(current);
-      current = "";
+      record.push(field);
+      field = "";
       continue;
     }
 
-    current += char;
+    if ((char === "\n" || char === "\r") && !insideQuotes) {
+      if (char === "\r" && nextChar === "\n") {
+        index += 1;
+      }
+
+      record.push(field);
+
+      if (record.some((item) => safeText(item))) {
+        records.push(record);
+      }
+
+      record = [];
+      field = "";
+      continue;
+    }
+
+    field += char;
   }
 
-  result.push(current);
+  record.push(field);
 
-  return result.map((item) => item.trim());
+  if (record.some((item) => safeText(item))) {
+    records.push(record);
+  }
+
+  return records;
 }
 
 function parseCsv(csvText) {
-  const lines = csvText
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
+  const records = parseCsvRecords(csvText);
 
-  if (lines.length <= 1) return [];
+  if (records.length <= 1) return [];
 
-  const headers = splitCsvLine(lines[0]);
+  const headers = records[0].map(normalizeHeader);
 
-  return lines.slice(1).map((line) => {
-    const values = splitCsvLine(line);
-
+  return records.slice(1).map((values) => {
     return headers.reduce((row, header, index) => {
       row[header] = values[index] || "";
       return row;
@@ -66,11 +88,19 @@ function parseCsv(csvText) {
   });
 }
 
+function pick(row, keys, fallback = "") {
+  for (const key of keys) {
+    if (safeText(row[key])) return row[key];
+  }
+
+  return fallback;
+}
+
 function tokenize(value) {
   return safeText(value)
     .toLowerCase()
     .replace(/[()[\]{}]/g, " ")
-    .split(/[,/|·\s]+/)
+    .split(/[,/|·\s\n\r]+/)
     .map((token) => token.trim())
     .filter((token) => token.length >= 2);
 }
@@ -94,6 +124,7 @@ function getUserTechStacks() {
 }
 
 function countMatches(sourceText, userTechs) {
+  const text = safeText(sourceText).toLowerCase();
   const sourceTokens = tokenize(sourceText);
   const normalizedUserTechs = userTechs.map((tech) => tech.toLowerCase());
 
@@ -102,7 +133,7 @@ function countMatches(sourceText, userTechs) {
       (token) =>
         token.includes(tech) ||
         tech.includes(token) ||
-        sourceText.toLowerCase().includes(tech)
+        text.includes(tech)
     )
   ).length;
 }
@@ -124,6 +155,10 @@ function calculateTextRichnessScore(value, base = 45) {
     "배포",
     "성능",
     "자동화",
+    "API",
+    "DB",
+    "데이터",
+    "서비스",
   ].filter((keyword) => text.includes(keyword)).length * 4;
 
   return Math.min(95, base + lengthBonus + keywordBonus);
@@ -132,14 +167,21 @@ function calculateTextRichnessScore(value, base = 45) {
 function calculateTechScore(job, userTechs) {
   if (!userTechs.length) return 45;
 
-  const matchCount = countMatches(job.tech_stacks, userTechs);
+  const targetText = [
+    job.techStacks,
+    job.requirements,
+    job.responsibilities,
+    job.preferences,
+  ].join(" ");
+
+  const matchCount = countMatches(targetText, userTechs);
   const total = Math.max(userTechs.length, 1);
 
   return Math.min(98, 50 + Math.round((matchCount / total) * 45));
 }
 
 function calculateCareerScore(job) {
-  const careerLevel = safeText(job.career_level);
+  const careerLevel = safeText(job.careerLevel);
 
   if (!careerLevel) return 65;
   if (careerLevel.includes("신입")) return 88;
@@ -147,8 +189,9 @@ function calculateCareerScore(job) {
   if (careerLevel.includes("경력무관")) return 78;
   if (careerLevel.includes("1년") || careerLevel.includes("2년")) return 74;
   if (careerLevel.includes("3년")) return 64;
+  if (careerLevel.includes("4년") || careerLevel.includes("5년")) return 56;
 
-  return 58;
+  return 60;
 }
 
 function buildRadarData(job, userTechs) {
@@ -156,7 +199,7 @@ function buildRadarData(job, userTechs) {
   const careerScore = calculateCareerScore(job);
   const responsibilityScore = calculateTextRichnessScore(job.responsibilities, 52);
   const preferenceScore = calculateTextRichnessScore(job.preferences, 48);
-  const cultureScore = calculateTextRichnessScore(job.team_culture, 50);
+  const cultureScore = calculateTextRichnessScore(job.teamCulture, 50);
 
   return [
     { subject: RADAR_AXES[0], score: techScore, fullMark: 100 },
@@ -168,25 +211,43 @@ function buildRadarData(job, userTechs) {
 }
 
 function calculateOverallMatch(radarData) {
-  const total = radarData.reduce((sum, item) => sum + item.score, 0);
+  if (!Array.isArray(radarData) || radarData.length === 0) return 0;
+
+  const total = radarData.reduce((sum, item) => sum + Number(item.score || 0), 0);
   return Math.round(total / radarData.length);
 }
 
 function normalizeJob(row, index, userTechs) {
-  const radarData = buildRadarData(row, userTechs);
+  const companyName = pick(row, ["company_name", "company", "기업명"], "기업명 미상");
+  const jobTitle = pick(row, ["job_title", "title", "직무명", "공고명"], "직무명 미상");
+  const careerLevel = pick(row, ["career_level", "career", "경력", "경력조건"], "경력 조건 미상");
+  const techStacks = pick(row, ["tech_stacks", "tech_stack", "skills", "기술스택"], "");
+  const requirements = pick(row, ["requirements", "requirement", "자격요건"], "");
+  const preferences = pick(row, ["preferences", "preferred", "우대사항"], "");
+  const responsibilities = pick(row, ["responsibilities", "main_tasks", "주요업무", "담당업무"], "");
+  const teamCulture = pick(row, ["team_culture", "culture", "조직문화"], "");
+  const benefits = pick(row, ["benefits", "welfare", "복지"], "");
+  const applyUrl = pick(row, ["apply_url", "url", "지원링크"], "");
+
+  const normalized = {
+    id: pick(row, ["job_id", "id"], `${companyName}-${jobTitle}-${index}`),
+    companyName,
+    jobTitle,
+    careerLevel,
+    techStacks,
+    requirements,
+    preferences,
+    responsibilities,
+    teamCulture,
+    benefits,
+    applyUrl,
+  };
+
+  const radarData = buildRadarData(normalized, userTechs);
   const overallMatch = calculateOverallMatch(radarData);
 
   return {
-    id: row.job_id || `${row.company_name}-${row.job_title}-${index}`,
-    companyName: row.company_name || "기업명 미상",
-    jobTitle: row.job_title || "직무명 미상",
-    careerLevel: row.career_level || "경력 조건 미상",
-    techStacks: row.tech_stacks || "",
-    requirements: row.requirements || "",
-    preferences: row.preferences || "",
-    responsibilities: row.responsibilities || "",
-    teamCulture: row.team_culture || "",
-    benefits: row.benefits || "",
+    ...normalized,
     overallMatch,
     radarData,
   };
@@ -205,6 +266,7 @@ export async function getJobFitRadarDataset() {
 
   return rows
     .map((row, index) => normalizeJob(row, index, userTechs))
+    .filter((job) => job.companyName !== "기업명 미상")
     .sort((a, b) => b.overallMatch - a.overallMatch);
 }
 

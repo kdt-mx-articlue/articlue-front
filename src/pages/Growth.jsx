@@ -14,11 +14,14 @@ import {
   YAxis,
 } from "recharts";
 import AppLayout from "../components/AppLayout.jsx";
+import JobFitRadarChart from "../components/JobFitRadarChart.jsx";
 import {
   getCareerScores,
   getReadinessData,
   getReadinessStatus,
 } from "../utils/careerScore.js";
+import { getJobFitRadarDataset } from "../services/jobFitService.js";
+import { getSecondFitResult } from "../services/interviewFitService.js";
 
 const FAVORITE_KEY = "articlue_favorite_jobs";
 const COVER_LETTER_KEY = "articlue_cover_letters";
@@ -281,6 +284,76 @@ function getLowestScoreItem(careerScores) {
   return items.sort((a, b) => a.score - b.score)[0];
 }
 
+
+function splitSkillText(value) {
+  return String(value || "")
+    .split(/[,/|·\n\r]+/)
+    .map((skill) => skill.trim())
+    .filter(Boolean)
+    .slice(0, 5);
+}
+
+function getCompanyTone(index) {
+  const tones = [
+    "border-blue-100 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/40",
+    "border-emerald-100 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950/40",
+    "border-amber-100 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/40",
+  ];
+
+  return tones[index % tones.length];
+}
+
+function getTopUniqueJobFits(jobFits, limit = 3) {
+  const seen = new Set();
+  const result = [];
+
+  for (const job of jobFits) {
+    const key = String(job.companyName || "").trim();
+    if (!key || seen.has(key)) continue;
+
+    seen.add(key);
+    result.push(job);
+
+    if (result.length >= limit) break;
+  }
+
+  return result;
+}
+
+function buildCsvCompanyCards(jobFits) {
+  return getTopUniqueJobFits(jobFits, 3).map((job, index) => {
+    const skills = splitSkillText(job.techStacks);
+    const weaknessItems = [
+      job.requirements ? "자격요건 문장 보완" : "자격요건 데이터 부족",
+      job.preferences ? "우대사항 연결 강화" : "우대사항 근거 부족",
+      job.responsibilities ? "주요업무 경험 연결" : "주요업무 분석 데이터 부족",
+    ];
+
+    return {
+      id: job.id || `${job.companyName}-${job.jobTitle}-${index}`,
+      rank: `TOP ${index + 1}`,
+      company: job.companyName,
+      role: job.jobTitle,
+      match: job.overallMatch,
+      reason: `${job.companyName}의 ${job.jobTitle} 공고를 CSV 데이터와 이력서 기술스택 기준으로 비교한 결과입니다. 기술스택, 경력조건, 주요업무, 우대사항, 조직문화 적합도를 종합해 1차 직무 매칭률을 계산했습니다.`,
+      improvement: weaknessItems.join(" · "),
+      skills: skills.length > 0 ? skills : ["공고 데이터", "직무 분석", "적합도 계산"],
+      tone: getCompanyTone(index),
+      statusBadges: ["CSV 공고 기반", "1차 직무 매칭", `${job.careerLevel}`].filter(Boolean),
+      interview: null,
+      hasCoverLetter: false,
+      sourceJob: job,
+      radarData: job.radarData,
+      requirements: job.requirements,
+      responsibilities: job.responsibilities,
+      preferences: job.preferences,
+      teamCulture: job.teamCulture,
+      benefits: job.benefits,
+      applyUrl: job.applyUrl,
+    };
+  });
+}
+
 function getPrimaryAction(careerScores) {
   if (careerScores.resume < 60) {
     return {
@@ -321,6 +394,8 @@ export default function Growth() {
   const [toast, setToast] = useState("");
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [jobFitCompanies, setJobFitCompanies] = useState([]);
+  const [jobFitError, setJobFitError] = useState("");
 
   const refreshGrowthData = () => {
     setRefreshKey((prev) => prev + 1);
@@ -348,12 +423,45 @@ export default function Growth() {
     };
   }, []);
 
+  useEffect(() => {
+    let ignore = false;
+
+    const loadJobFitCompanies = async () => {
+      try {
+        const dataset = await getJobFitRadarDataset();
+        if (ignore) return;
+
+        setJobFitCompanies(dataset);
+        setJobFitError("");
+      } catch (error) {
+        console.error("CSV 기반 직무 적합도 데이터를 불러오지 못했습니다.", error);
+        if (ignore) return;
+
+        setJobFitCompanies([]);
+        setJobFitError("CSV 공고 데이터를 불러오지 못했습니다. 기존 추천 기업 데이터로 표시합니다.");
+      }
+    };
+
+    loadJobFitCompanies();
+
+    return () => {
+      ignore = true;
+    };
+  }, [refreshKey]);
+
   const careerScores = useMemo(() => getCareerScores(), [refreshKey]);
   const readinessData = useMemo(() => getReadinessData(), [refreshKey]);
   const aiGrowthResult = useMemo(() => readAiGrowthResult(), [refreshKey]);
+  const secondFitResult = useMemo(() => getSecondFitResult(), [refreshKey]);
   const readinessStatus = getReadinessStatus(careerScores.overall);
 
-  const recommendedCompanies = useMemo(() => buildDynamicCompanies(), [refreshKey]);
+  const recommendedCompanies = useMemo(() => {
+    if (jobFitCompanies.length > 0) {
+      return buildCsvCompanyCards(jobFitCompanies);
+    }
+
+    return buildDynamicCompanies();
+  }, [jobFitCompanies, refreshKey]);
 
   const radarData = scores.map(([subject, score]) => ({
     subject,
@@ -507,7 +615,12 @@ export default function Growth() {
               추천 기업 TOP 3
             </h3>
             <p className="mt-2 break-keep text-[14px] leading-[1.65] text-slate-600 dark:text-slate-300">
-              찜한 기업, 자소서 생성 여부, 면접 기록, 기술스택을 반영해 지원 가능성이 높은 기업을 우선순위로 정리했습니다.
+              CSV 공고 데이터와 이력서 기술스택을 비교해 1차 직무 매칭률이 높은 기업을 우선순위로 정리했습니다.
+            </p>
+            <p className="mt-2 break-keep text-[12px] font-extrabold leading-[1.6] text-slate-500 dark:text-slate-400">
+              {jobFitCompanies.length > 0
+                ? `CSV 공고 ${jobFitCompanies.length}개 기준으로 계산했습니다.`
+                : jobFitError || "CSV 데이터를 불러오는 중입니다. 데이터가 없으면 기존 추천 기업을 표시합니다."}
             </p>
           </div>
 
@@ -545,7 +658,7 @@ export default function Growth() {
                     {company.match}%
                   </strong>
                   <span className="mt-1 block text-[11px] font-black text-slate-500 dark:text-slate-400">
-                    적합도
+                    1차 매칭률
                   </span>
                 </div>
               </div>
@@ -567,7 +680,7 @@ export default function Growth() {
                 <p className="mb-2 text-[11px] font-black uppercase tracking-[0.08em] text-blue-700 dark:text-blue-300">
                   추천 이유
                 </p>
-                <p className="line-clamp-3 break-keep text-[13px] font-bold leading-[1.65] text-slate-700 dark:text-slate-300">
+                <p className="break-keep text-[13px] font-bold leading-[1.65] text-slate-700 dark:text-slate-300">
                   {company.reason}
                 </p>
               </div>
@@ -597,7 +710,7 @@ export default function Growth() {
                 </button>
 
                 <Link
-                  to={`/interview?company=${encodeURIComponent(company.company)}`}
+                  to={`/interview?company=${encodeURIComponent(company.company)}&role=${encodeURIComponent(company.role)}`}
                   className="rounded-full border border-blue-600 bg-white/80 px-[12px] py-[10px] text-center text-[12px] font-black text-blue-700 transition hover:bg-blue-50 dark:bg-slate-900 dark:text-blue-300 dark:hover:bg-blue-950"
                 >
                   면접 준비
@@ -883,8 +996,8 @@ export default function Growth() {
       </section>
 
       {selectedCompany && (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-900/70 px-5 backdrop-blur-sm">
-          <div className="relative w-full max-w-[720px] rounded-[32px] bg-white p-[30px] shadow-[0_30px_80px_rgba(15,23,42,0.25)] dark:bg-slate-900">
+        <div className="fixed inset-0 z-[1000] flex items-start justify-center overflow-y-auto bg-slate-900/70 px-5 py-6 backdrop-blur-sm">
+          <div className="relative max-h-[86vh] w-full max-w-[720px] overflow-y-auto rounded-[32px] bg-white p-[24px] shadow-[0_30px_80px_rgba(15,23,42,0.25)] dark:bg-slate-900">
             <button
               type="button"
               onClick={() => setSelectedCompany(null)}
@@ -907,10 +1020,20 @@ export default function Growth() {
               </p>
             </div>
 
+            {selectedCompany.radarData && (
+              <div className="mb-[22px]">
+                <JobFitRadarChart
+                  data={selectedCompany.radarData}
+                  companyName={selectedCompany.company}
+                  jobTitle={selectedCompany.role}
+                />
+              </div>
+            )}
+
             <div className="mb-[22px] rounded-[24px] bg-slate-100 p-[20px] dark:bg-slate-800">
               <div className="mb-3 flex items-end justify-between gap-4">
                 <span className="text-[14px] font-black text-slate-600 dark:text-slate-300">
-                  AI 적합도 분석
+                  1차 직무 매칭률
                 </span>
 
                 <strong className="text-[42px] font-black leading-none text-emerald-600 dark:text-emerald-300">
@@ -929,6 +1052,97 @@ export default function Growth() {
                 {selectedCompany.reason}
               </p>
             </div>
+
+
+            {secondFitResult.status !== "empty" && (
+              <section className="mb-[24px] rounded-[26px] border border-indigo-100 bg-indigo-50 p-[20px] dark:border-indigo-900 dark:bg-indigo-950/30">
+                <div className="mb-4 flex items-start justify-between gap-4">
+                  <div>
+                    <p className="mb-2 text-[13px] font-black text-indigo-700 dark:text-indigo-300">
+                      2차 최종 직무 적합도
+                    </p>
+                    <h4 className="text-[21px] font-black tracking-[-0.4px] text-slate-900 dark:text-white">
+                      AI 면접 결과 반영 리포트
+                    </h4>
+                    <p className="mt-2 break-keep text-[13px] font-bold leading-[1.7] text-slate-600 dark:text-slate-300">
+                      1차 공고 매칭 이후 면접 답변 결과를 반영해 기술 이해도, 문제 해결력,
+                      비즈니스 이해도, 커뮤니케이션, 성장 가능성을 다시 계산했습니다.
+                    </p>
+                  </div>
+
+                  <div className="shrink-0 rounded-[22px] border border-indigo-100 bg-white px-5 py-4 text-center dark:border-indigo-900 dark:bg-slate-900">
+                    <span className="block text-[12px] font-black text-indigo-700 dark:text-indigo-300">
+                      최종 적합도
+                    </span>
+                    <strong className="block text-[36px] font-black leading-none text-indigo-700 dark:text-indigo-300">
+                      {secondFitResult.totalScore}%
+                    </strong>
+                  </div>
+                </div>
+
+                <div className="h-[280px] rounded-[22px] border border-indigo-100 bg-white p-4 dark:border-indigo-900 dark:bg-slate-900">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart data={secondFitResult.radarData}>
+                      <PolarGrid />
+                      <PolarAngleAxis dataKey="subject" tick={{ fontSize: 12, fontWeight: 700 }} />
+                      <Radar
+                        name="2차 적합도"
+                        dataKey="score"
+                        stroke="#4f46e5"
+                        fill="#4f46e5"
+                        fillOpacity={0.24}
+                      />
+                      <Tooltip formatter={(value) => [`${value}%`, "2차 적합도"]} />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  <div className="rounded-[20px] border border-indigo-100 bg-white p-4 dark:border-indigo-900 dark:bg-slate-900">
+                    <h5 className="mb-3 text-[15px] font-black text-slate-900 dark:text-white">
+                      면접 강점
+                    </h5>
+                    <ul className="space-y-2">
+                      {(secondFitResult.strengths.length > 0
+                        ? secondFitResult.strengths
+                        : ["AI 면접 결과 저장 후 강점 분석이 표시됩니다."]
+                      ).map((item, index) => (
+                        <li
+                          key={`${item}-${index}`}
+                          className="break-keep text-[13px] font-bold leading-[1.65] text-slate-600 dark:text-slate-300"
+                        >
+                          · {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="rounded-[20px] border border-indigo-100 bg-white p-4 dark:border-indigo-900 dark:bg-slate-900">
+                    <h5 className="mb-3 text-[15px] font-black text-slate-900 dark:text-white">
+                      답변 취약점
+                    </h5>
+                    <ul className="space-y-2">
+                      {(secondFitResult.improvements.length > 0
+                        ? secondFitResult.improvements
+                        : ["AI 면접 결과 저장 후 보완점 분석이 표시됩니다."]
+                      ).map((item, index) => (
+                        <li
+                          key={`${item}-${index}`}
+                          className="break-keep text-[13px] font-bold leading-[1.65] text-slate-600 dark:text-slate-300"
+                        >
+                          · {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="mt-4 rounded-[20px] border border-dashed border-indigo-200 bg-white px-4 py-3 text-[13px] font-bold leading-[1.7] text-slate-700 dark:border-indigo-900 dark:bg-slate-900 dark:text-slate-300">
+                  <span className="font-black text-indigo-700 dark:text-indigo-300">최종 액션:</span>{" "}
+                  2차 적합도가 낮은 축을 기준으로 답변 근거, 성과 수치, 기술 선택 이유를 보완한 뒤 같은 기업으로 재면접을 진행하세요.
+                </div>
+              </section>
+            )}
 
             {selectedCompany.statusBadges.length > 0 && (
               <div className="mb-[20px]">
@@ -968,7 +1182,7 @@ export default function Growth() {
               </Link>
 
               <Link
-                to={`/interview?company=${encodeURIComponent(selectedCompany.company)}`}
+                to={`/interview?company=${encodeURIComponent(selectedCompany.company)}&role=${encodeURIComponent(selectedCompany.role)}`}
                 className="rounded-[18px] border border-slate-300 px-[18px] py-[15px] text-center text-[14px] font-black text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
               >
                 면접 질문 생성하기

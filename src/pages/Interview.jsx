@@ -19,8 +19,71 @@ const portfolioOptions = [
   "포트폴리오_v2.pdf",
 ];
 
-const followUpQuestion =
-  "방금 답변에서 비용과 안정성의 균형을 언급하셨습니다. 그렇다면 사용자 경험을 해치지 않는 선에서 어떤 데이터를 먼저 캐시에서 제거할지 판단하는 기준은 무엇인가요?";
+const defaultInterviewData = {
+  summary: "AI 면접 준비 데이터가 없어 기본 질문으로 진행합니다.",
+  questions: [
+    "Redis를 도입하셨는데, 메모리 초과(OOM) 발생 시 어떤 비즈니스적 기준을 세워 데이터를 삭제(Eviction)하셨나요?",
+  ],
+  followUpQuestions: [
+    "방금 답변에서 비용과 안정성의 균형을 언급하셨습니다. 그렇다면 사용자 경험을 해치지 않는 선에서 어떤 데이터를 먼저 캐시에서 제거할지 판단하는 기준은 무엇인가요?",
+  ],
+  scores: {
+    tech: 86,
+    problem: 84,
+    business: 78,
+    communication: 88,
+    total: 84,
+  },
+  strengths: [
+    "기술 선택과 운영 안정성을 함께 고려하려는 관점이 좋습니다.",
+    "프로젝트 경험을 바탕으로 문제 해결 과정을 설명할 수 있습니다.",
+    "질문 의도를 파악하고 답변 구조를 잡는 능력이 안정적입니다.",
+  ],
+  improvements: [
+    "성과를 설명할 때 수치, 사용자 변화, 개선 전후 비교가 더 필요합니다.",
+    "기술 선택 이유를 비즈니스 기준과 더 직접적으로 연결해야 합니다.",
+    "답변 초반에 결론을 먼저 말하고 근거를 붙이면 전달력이 더 좋아집니다.",
+  ],
+};
+
+function readInterviewAnalysisResult() {
+  try {
+    const raw = window.localStorage.getItem("articlue_interview_result");
+    if (!raw) return defaultInterviewData;
+
+    const parsed = JSON.parse(raw);
+    const data = parsed?.data || {};
+
+    return {
+      ...defaultInterviewData,
+      ...data,
+      questions:
+        Array.isArray(data.questions) && data.questions.length > 0
+          ? data.questions
+          : defaultInterviewData.questions,
+      followUpQuestions:
+        Array.isArray(data.followUpQuestions) &&
+        data.followUpQuestions.length > 0
+          ? data.followUpQuestions
+          : defaultInterviewData.followUpQuestions,
+      scores: {
+        ...defaultInterviewData.scores,
+        ...(data.scores || {}),
+      },
+      strengths:
+        Array.isArray(data.strengths) && data.strengths.length > 0
+          ? data.strengths
+          : defaultInterviewData.strengths,
+      improvements:
+        Array.isArray(data.improvements) && data.improvements.length > 0
+          ? data.improvements
+          : defaultInterviewData.improvements,
+    };
+  } catch (error) {
+    console.error("AI 면접 분석 결과를 불러오지 못했습니다.", error);
+    return defaultInterviewData;
+  }
+}
 
 export default function Interview() {
   const [searchParams] = useSearchParams();
@@ -40,6 +103,11 @@ export default function Interview() {
   const [messages, setMessages] = useState([]);
   const [currentQuestion, setCurrentQuestion] = useState(1);
   const [remaining, setRemaining] = useState(90);
+  const [interviewData, setInterviewData] = useState(defaultInterviewData);
+
+  useEffect(() => {
+    setInterviewData(readInterviewAnalysisResult());
+  }, []);
 
   useEffect(() => {
     const syncDarkMode = () => {
@@ -85,14 +153,14 @@ export default function Interview() {
 
   useEffect(() => {
     const queryCompany = searchParams.get("company");
+    const queryRole = searchParams.get("role");
 
     if (queryCompany) {
-      const matched = companyOptions.find((option) =>
-        option.includes(queryCompany)
-      );
+      const decodedCompany = queryCompany.trim();
+      const decodedRole = queryRole?.trim() || "Developer";
 
-      if (matched) {
-        setCompany(matched);
+      if (decodedCompany) {
+        setCompany(`${decodedCompany} - ${decodedRole}`);
         return;
       }
     }
@@ -118,6 +186,26 @@ export default function Interview() {
     return { companyName, roleName, countNumber, timeText };
   }, [company, questionCount]);
 
+  const companySelectOptions = useMemo(() => {
+    if (!company) return companyOptions;
+    if (companyOptions.includes(company)) return companyOptions;
+
+    return [company, ...companyOptions];
+  }, [company]);
+
+  const firstQuestion =
+    interviewData.questions?.[0] || defaultInterviewData.questions[0];
+
+  const getFollowUpQuestion = () => {
+    const index = messages.filter((message) => message.type === "user").length;
+
+    return (
+      interviewData.followUpQuestions?.[index] ||
+      interviewData.followUpQuestions?.[0] ||
+      defaultInterviewData.followUpQuestions[0]
+    );
+  };
+
   useEffect(() => {
     if (view !== "interview" || analysis) return;
 
@@ -138,7 +226,7 @@ export default function Interview() {
       (message) => message.type === "user"
     ).length;
 
-    const score = answeredCount >= 3 ? 88 : answeredCount >= 1 ? 82 : 76;
+    const score = interviewData.scores?.total || 84;
 
     const resultData = {
       id: Date.now(),
@@ -210,7 +298,7 @@ export default function Interview() {
     setMessages((prev) => [
       ...prev,
       { type: "user", text: answer.trim() },
-      { type: "bot", text: followUpQuestion },
+      { type: "bot", text: getFollowUpQuestion() },
     ]);
 
     setAnswer("");
@@ -332,8 +420,8 @@ export default function Interview() {
 
               <BotMessage
                 speaker={`${summary.companyName} ${persona} 면접관`}
-                text="Redis를 도입하셨는데, 메모리 초과(OOM) 발생 시 어떤 비즈니스적 기준을 세워 데이터를 삭제(Eviction)하셨나요?"
-                source="[동아일보] 글로벌 서비스 트래픽 폭주와 캐시 전략 변화 분석 · 2026.04.10"
+                text={firstQuestion}
+                source="[AI 분석 결과] 이력서, 포트폴리오, 지원 직무 기반 질문"
               />
 
               <div className="mx-auto w-[min(520px,100%)] rounded-[20px] border border-dashed border-blue-200 bg-blue-50 px-4 py-[14px] text-center text-[13px] font-black leading-[1.6] text-blue-700 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-300">
@@ -359,7 +447,7 @@ export default function Interview() {
                     key={index}
                     speaker={`${summary.companyName} ${persona} 면접관`}
                     text={message.text}
-                    source="[DBR] 플랫폼 비즈니스의 서버 비용 최적화 전략 · 2026.04.12"
+                    source="[AI 분석 결과] 답변 내용 기반 꼬리질문"
                   />
                 )
               )}
@@ -472,6 +560,7 @@ export default function Interview() {
             setPersona={setPersona}
             resetSettings={resetSettings}
             showSummary={showSummary}
+            companySelectOptions={companySelectOptions}
           />
         )}
 
@@ -483,6 +572,7 @@ export default function Interview() {
             persona={persona}
             startInterview={startInterview}
             backToSetup={backToSetup}
+            interviewData={interviewData}
           />
         )}
 
@@ -494,6 +584,7 @@ export default function Interview() {
             persona={persona}
             messages={messages}
             restart={() => setView("setup")}
+            interviewData={interviewData}
           />
         )}
 
@@ -531,7 +622,7 @@ function SetupView(props) {
             onChange={(event) => props.setCompany(event.target.value)}
             className="w-full rounded-2xl border border-slate-200 bg-white px-[14px] py-3 text-[14px] font-bold text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
           >
-            {companyOptions.map((option) => (
+            {(props.companySelectOptions || companyOptions).map((option) => (
               <option key={option}>{option}</option>
             ))}
           </select>
@@ -619,7 +710,12 @@ function SummaryView({
   persona,
   startInterview,
   backToSetup,
+  interviewData,
 }) {
+  const questionPreview =
+    interviewData?.questions?.[0] ||
+    "AI 면접 질문 데이터가 없어 기본 질문으로 진행됩니다.";
+
   return (
     <section className="mx-auto w-full max-w-[760px]">
       <aside className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_14px_42px_rgba(15,23,42,0.07)] dark:border-slate-700 dark:bg-slate-900">
@@ -628,8 +724,7 @@ function SummaryView({
             면접 준비 요약
           </h2>
           <p className="text-[13px] font-extrabold leading-[1.6] text-slate-600 dark:text-slate-300">
-            설정한 조건을 기준으로 실전 면접이 구성됩니다. 내용을 확인한 뒤 AI
-            면접관 입장하기를 눌러주세요.
+            설정한 조건과 AI 분석 결과를 기준으로 실전 면접이 구성됩니다.
           </p>
         </div>
 
@@ -642,11 +737,7 @@ function SummaryView({
             ["👤", "면접관 페르소나", persona],
             ["💬", "질문 구성", `총 ${summary.countNumber}문항 · 꼬리질문 포함`],
             ["⏱️", "예상 소요 시간", summary.timeText],
-            [
-              "✅",
-              "평가 기준",
-              "기술 정확도, 문제 해결 과정, 비즈니스 임팩트, 커뮤니케이션",
-            ],
+            ["🤖", "AI 질문 예시", questionPreview],
           ]}
         />
 
@@ -671,9 +762,19 @@ function SummaryView({
   );
 }
 
-function ResultView({ summary, portfolio, difficulty, persona, messages, restart }) {
+function ResultView({
+  summary,
+  portfolio,
+  difficulty,
+  persona,
+  messages,
+  restart,
+  interviewData,
+}) {
   const answeredCount = messages.filter((message) => message.type === "user").length;
-  const score = answeredCount >= 3 ? 88 : answeredCount >= 1 ? 82 : 76;
+  const scores = interviewData?.scores || defaultInterviewData.scores;
+  const strengths = interviewData?.strengths || defaultInterviewData.strengths;
+  const improvements = interviewData?.improvements || defaultInterviewData.improvements;
 
   return (
     <section className="mx-auto w-full max-w-[960px]">
@@ -687,7 +788,7 @@ function ResultView({ summary, portfolio, difficulty, persona, messages, restart
               {summary.companyName} {summary.roleName} 면접 결과
             </h1>
             <p className="mt-3 text-[14px] font-extrabold leading-[1.7] text-slate-600 dark:text-slate-300">
-              답변 내용을 바탕으로 기술 정확도, 문제 해결 과정, 비즈니스 임팩트,
+              AI 분석 결과를 바탕으로 기술 정확도, 문제 해결 과정, 비즈니스 임팩트,
               커뮤니케이션 구조를 종합 평가했습니다.
             </p>
           </div>
@@ -697,7 +798,7 @@ function ResultView({ summary, portfolio, difficulty, persona, messages, restart
               종합 점수
             </span>
             <strong className="block text-[42px] font-black text-blue-700 dark:text-blue-300">
-              {score}
+              {scores.total || 84}
             </strong>
             <span className="text-[12px] font-extrabold text-slate-500 dark:text-slate-400">
               / 100
@@ -707,10 +808,10 @@ function ResultView({ summary, portfolio, difficulty, persona, messages, restart
 
         <div className="mb-5 grid grid-cols-4 gap-3">
           {[
-            ["기술 정확도", "86점"],
-            ["문제 해결 과정", "84점"],
-            ["비즈니스 핏", "78점"],
-            ["커뮤니케이션", "88점"],
+            ["기술 정확도", `${scores.tech || 86}점`],
+            ["문제 해결 과정", `${scores.problem || 84}점`],
+            ["비즈니스 핏", `${scores.business || 78}점`],
+            ["커뮤니케이션", `${scores.communication || 88}점`],
           ].map(([label, value]) => (
             <div
               key={label}
@@ -736,22 +837,8 @@ function ResultView({ summary, portfolio, difficulty, persona, messages, restart
         />
 
         <div className="mt-6 grid grid-cols-2 gap-4">
-          <ResultCard
-            title="강점"
-            items={[
-              "Redis 캐싱과 서버 안정성에 대한 기술 이해도가 드러났습니다.",
-              "답변 구조가 비교적 명확하고 질문 의도에 맞게 전개되었습니다.",
-              "운영 관점의 리스크를 함께 고려하려는 태도가 좋습니다.",
-            ]}
-          />
-          <ResultCard
-            title="보완할 점"
-            items={[
-              "비용 절감, 응답 속도 개선 등 수치 기반 성과 표현이 부족합니다.",
-              "기술 선택의 우선순위를 비즈니스 기준과 더 직접적으로 연결해야 합니다.",
-              "꼬리질문에서는 결론을 먼저 말하고 근거를 붙이는 방식이 더 좋습니다.",
-            ]}
-          />
+          <ResultCard title="강점" items={strengths} />
+          <ResultCard title="보완할 점" items={improvements} />
         </div>
 
         <div className="mt-6 flex flex-wrap justify-end gap-3">
@@ -785,7 +872,7 @@ function SummaryTable({ rows }) {
     <div className="overflow-hidden rounded-[20px] border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
       {rows.map(([icon, label, value], index) => (
         <div
-          key={label}
+          key={`${label}-${index}`}
           className={`grid grid-cols-[36px_100px_minmax(0,1fr)] items-center gap-[10px] border-b border-slate-200 px-[14px] py-[14px] last:border-b-0 dark:border-slate-700 ${
             index === rows.length - 1 ? "items-start" : ""
           }`}
@@ -810,9 +897,9 @@ function ResultCard({ title, items }) {
     <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-800">
       <h3 className="mb-3 text-[18px] font-black">{title}</h3>
       <ul className="space-y-2">
-        {items.map((item) => (
+        {items.map((item, index) => (
           <li
-            key={item}
+            key={`${item}-${index}`}
             className="text-[13px] font-extrabold leading-[1.65] text-slate-600 dark:text-slate-300"
           >
             · {item}
