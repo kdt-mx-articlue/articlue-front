@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { saveAuthUser } from "../utils/auth.js";
-import { githubAuthLogin, login } from "../services/authApi.js";
+import { githubAuthLogin, githubAuthToken, login } from "../services/authApi.js";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -160,44 +160,229 @@ export default function Login() {
   };
 
   const handleGithubLogin = async () => {
-    const GITHUB_CLIENT_ID = import.meta.env.VITE_GITHUB_CLIENT_ID;
-    const REDIRECT_URI = "http://localhost:5173/auth/github/callback";
-    const state = Math.random().toString(36).substring(2);
-
-    localStorage.setItem("github_oauth_state", state);
-
-    try {
-      const data = await githubAuthLogin({
-        redirectUri: REDIRECT_URI,
-        redirect_uri: REDIRECT_URI,
-        state,
-      });
-
-      const redirectUrl =
-        data?.redirectUrl ||
-        data?.redirect_url ||
-        data?.authorizationUrl ||
-        data?.authorization_url ||
-        data?.url;
-
-      if (redirectUrl) {
-        window.location.href = redirectUrl;
-        return;
-      }
-    } catch (error) {
-      console.warn("GitHub 로그인 API 호출 실패. 프론트 OAuth URL로 전환합니다.", error);
-    }
-
-    if (!GITHUB_CLIENT_ID) {
-      showToast("GitHub Client ID가 설정되지 않았습니다.");
+    if (loading) {
       return;
     }
 
-    const githubURL = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&redirect_uri=${encodeURIComponent(
-      REDIRECT_URI
-    )}&scope=read:user user:email repo&state=${state}`;
+    setLoading(true);
 
-    window.location.href = githubURL;
+    try {
+      const loginResponse = await githubAuthLogin({
+        scope: "read:user user:email repo",
+      });
+
+      const loginResult = loginResponse?.data || loginResponse || {};
+
+      const deviceCode =
+        loginResult.device_code ||
+        loginResult.deviceCode;
+
+      const userCode =
+        loginResult.user_code ||
+        loginResult.userCode;
+
+      const verificationUri =
+        loginResult.verification_uri_complete ||
+        loginResult.verificationUriComplete ||
+        loginResult.verification_uri ||
+        loginResult.verificationUri;
+
+      let pollingIntervalSeconds = Number(
+        loginResult.interval ||
+        loginResult.intervalSeconds ||
+        5
+      );
+
+      if (!deviceCode || !userCode || !verificationUri) {
+        console.log("GitHub 인증 코드 발급 응답:", loginResponse);
+        showToast("GitHub 인증 코드 발급 응답이 올바르지 않습니다.");
+        setLoading(false);
+        return;
+      }
+
+      localStorage.setItem("github_device_code", deviceCode);
+      localStorage.setItem("github_user_code", userCode);
+
+      try {
+        await navigator.clipboard.writeText(userCode);
+
+        alert(
+          `GitHub 인증 코드를 클립보드에 복사했습니다.\n\n인증 코드: ${userCode}\n\n확인을 누르면 GitHub 인증 페이지가 새 탭으로 열립니다.`
+        );
+      } catch (clipboardError) {
+        console.warn("GitHub 인증 코드 복사 실패:", clipboardError);
+
+        alert(
+          `GitHub 인증 페이지에서 아래 코드를 입력해 주세요.\n\n인증 코드: ${userCode}\n\n확인을 누르면 GitHub 인증 페이지가 새 탭으로 열립니다.`
+        );
+      }
+
+      const githubWindow = window.open(verificationUri, "_blank");
+
+      if (!githubWindow) {
+        showToast("팝업이 차단되었습니다. 브라우저 팝업 허용 후 다시 시도해 주세요.");
+        setLoading(false);
+        return;
+      }
+
+      showToast("GitHub 인증 완료를 기다리는 중입니다.");
+
+      let tryCount = 0;
+      const maxTryCount = 60;
+
+      const pollGithubToken = async () => {
+        tryCount++;
+
+        try {
+          const tokenResponse = await githubAuthToken({
+            device_code: deviceCode,
+            deviceCode,
+          });
+
+          console.log("GitHub 토큰 발급 응답:", tokenResponse);
+
+          const tokenRoot = tokenResponse || {};
+          const tokenData = tokenRoot.data || {};
+
+          const errorCode =
+            tokenData.errorCode ||
+            tokenData.error_code ||
+            tokenRoot.errorCode ||
+            tokenRoot.error_code;
+
+          /**
+           * GitHub가 요청 간격이 너무 짧다고 응답한 경우
+           * 응답으로 내려온 interval 값으로 다음 요청 간격을 늘린다.
+           */
+          if (errorCode === "slow_down") {
+            pollingIntervalSeconds = Number(tokenData.interval || 15);
+
+            if (tryCount >= maxTryCount) {
+              setLoading(false);
+              showToast("GitHub 인증 시간이 초과되었습니다. 다시 시도해 주세요.");
+              return;
+            }
+
+            window.setTimeout(
+              pollGithubToken,
+              pollingIntervalSeconds * 1000
+            );
+
+            return;
+          }
+
+          /**
+           * 아직 사용자가 GitHub 인증을 완료하지 않은 경우
+           * 실패가 아니라 대기 상태이므로 계속 확인한다.
+           */
+          const isPending =
+            tokenRoot.status === "AUTHORIZATION_PENDING" ||
+            tokenRoot.authenticated === false ||
+            errorCode === "authorization_pending";
+
+          if (isPending) {
+            if (tryCount >= maxTryCount) {
+              setLoading(false);
+              showToast("GitHub 인증 시간이 초과되었습니다. 다시 시도해 주세요.");
+              return;
+            }
+
+            window.setTimeout(
+              pollGithubToken,
+              pollingIntervalSeconds * 1000
+            );
+
+            return;
+          }
+
+          /**
+           * 인증 성공 시 백엔드가 내려주는 세션 ID
+           */
+          const githubSessionId =
+            tokenData.github_session_id ||
+            tokenData.githubSessionId ||
+            tokenData.social_session_id ||
+            tokenData.socialSessionId ||
+            tokenRoot.github_session_id ||
+            tokenRoot.githubSessionId ||
+            tokenRoot.social_session_id ||
+            tokenRoot.socialSessionId;
+
+          const githubUser =
+            tokenData.socialUser ||
+            tokenData.githubUser ||
+            tokenData.github_user ||
+            tokenData.user ||
+            tokenRoot.socialUser ||
+            tokenRoot.githubUser ||
+            tokenRoot.github_user ||
+            tokenRoot.user ||
+            {};
+
+          if (!githubSessionId) {
+            console.log("GitHub 세션 ID 없는 응답:", tokenResponse);
+
+            if (tryCount >= maxTryCount) {
+              setLoading(false);
+              showToast("GitHub 세션 정보를 받지 못했습니다.");
+              return;
+            }
+
+            window.setTimeout(
+              pollGithubToken,
+              pollingIntervalSeconds * 1000
+            );
+
+            return;
+          }
+
+          localStorage.setItem("github_session_id", githubSessionId);
+          localStorage.setItem("social_session_id", githubSessionId);
+
+          saveAuthUser({
+            name:
+              githubUser.name ||
+              githubUser.login ||
+              githubUser.nickname ||
+              "GitHub 사용자",
+            nickname: githubUser.login || githubUser.nickname || "",
+            loginId: githubUser.login || "",
+            email: githubUser.email || "",
+            loginType: "github",
+            provider: "github",
+            githubSessionId,
+            loginAt: new Date().toISOString(),
+          });
+
+          showToast("GitHub 인증이 완료되었습니다.");
+          setLoading(false);
+
+          navigate("/", { replace: true });
+        } catch (tokenError) {
+          console.warn("GitHub 토큰 발급 확인 중:", tokenError);
+
+          if (tryCount >= maxTryCount) {
+            setLoading(false);
+            showToast("GitHub 인증 시간이 초과되었습니다. 다시 시도해 주세요.");
+            return;
+          }
+
+          window.setTimeout(
+            pollGithubToken,
+            pollingIntervalSeconds * 1000
+          );
+        }
+      };
+
+      window.setTimeout(
+        pollGithubToken,
+        pollingIntervalSeconds * 1000
+      );
+    } catch (error) {
+      console.error("GitHub 인증 실패:", error);
+      showToast(error.userMessage || "GitHub 인증에 실패했습니다.");
+      setLoading(false);
+    }
   };
 
   return (
